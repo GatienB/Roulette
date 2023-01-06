@@ -1,10 +1,17 @@
 class BetStats {
+    #bankValueId = "bank-value";
+    #stakeValueId = "stake-value";
     #outputDivId = "bet-stats";
     #tapis = null;
+    #initialBank = 100;
+    #bank;
+    #stakeTotal = 0;
 
     constructor(tapis) {
         this.#initStats();
         this.#tapis = tapis;
+        this.#bank = this.#initialBank;
+        this.refreshBank();
     }
 
     #initStats() {
@@ -40,6 +47,9 @@ class BetStats {
         div.innerText += `Bets won : ${betsResult.won.length}`;
         let benef = this.getNetGainByNumber(betsResult);
         div.innerText += `\nGains : ${benef} €`;
+        this.#bank += benef;
+        this.#stakeTotal = 0;
+        this.refreshBank();
     }
 
     clear() {
@@ -47,8 +57,30 @@ class BetStats {
         while (div.hasChildNodes()) {
             div.removeChild(div.lastChild);
         }
+        this.reset();
     }
 
+    setStake(bets) {
+        this.#stakeTotal = 0;
+        bets.forEach(b => {
+            this.#stakeTotal += b.stake
+        });
+        this.refreshBank();
+    }
+
+    refreshBank() {
+        document.getElementById(this.#bankValueId).innerText = this.#bank;
+        document.getElementById(this.#stakeValueId).innerText = this.#stakeTotal;
+    }
+
+    canPlaceBet(stake) {
+        return this.#bank - (stake + this.#stakeTotal) >= 0;
+    }
+
+    reset() {
+        this.#stakeTotal = 0;
+        this.refreshBank();
+    }
 }
 
 class Tapis {
@@ -63,6 +95,12 @@ class Tapis {
     #bets = [];
     #canPlaceBet = false;
     stakeValue = 10;
+    #betsHistory = [];
+    #betHistoryIndex = -1;
+
+    #SECOND_TO_LAST_LINE_BETS = ["1 to 12", "13 to 24", "25 to 36"];
+    #LAST_LINE_BETS = ["1 to 18", "Even", "Red", "Black", "Odd", "19 to 36"];
+
     constructor(offsetX = 70, offsetY = 30) {
         this.offsetX = offsetX;
         this.offsetY = offsetY;
@@ -319,7 +357,22 @@ class Tapis {
                     if (intIndexX < 0 && (indexY > lineOffset && indexY < 2 + lineOffset)) {
                         this.addBetSingleNumber(0);
                         return "0";
-                    } else
+                    }
+                    else if (intIndexX == 12) {
+                        if (indexY > 1 - lineOffset && indexY < 1 + lineOffset) {
+                            let _x = this.offsetX + 12 * this.rectWidth + this.rectWidth / 2;
+                            let _y = this.offsetY + this.rectHeight;
+                            this.#addBet(`line 3-line 2`, _x, _y);
+                            return `line 3-line 2`;
+                        }
+                        else if (indexY > 2 - lineOffset && indexY < 2 + lineOffset) {
+                            let _x = this.offsetX + 12 * this.rectWidth + this.rectWidth / 2;
+                            let _y = this.offsetY + 2 * this.rectHeight;
+                            this.#addBet(`line 2-line 1`, _x, _y);
+                            return `line 2-line 1`;
+                        }
+                    }
+                    else
                         return -1;
                 }
                 else {
@@ -412,7 +465,7 @@ class Tapis {
 
     getBottomBetFromCoords(x, y) {
         if (this.isInBottomBets(x, y)) {
-            let offsetInCase = 3;
+            let offsetInCase = 5;
             if (y > this.offsetY + this.rectHeight * 3 + offsetInCase && y < this.offsetY + this.rectHeight * 4 - offsetInCase) {
                 /*
                 // 1st tier
@@ -428,19 +481,47 @@ class Tapis {
                     return "25 to 36";
                 }
                 */
-                const results = ["1 to 12", "13 to 24", "25 to 36"];
-                for (let i = 0; i < results.length; i++) {
-                    if (x > this.offsetX + offsetInCase + i * 4 * this.rectWidth && x < this.offsetX - offsetInCase + (4 * (i + 1)) * this.rectWidth) {
-                        let _x = this.offsetX + offsetInCase + i * 4 * this.rectWidth + (this.rectWidth * 4 / 2);
-                        let _y = this.offsetY + offsetInCase + this.rectHeight * 3 + (this.rectHeight / 2);
-                        this.#addBet(results[i], _x, _y);
-                        return results[i];
+                const lineOffset = 1 / 30;
+                let indexX = (x - this.offsetX) / (this.rectWidth * 4),
+                    intIndexX = Math.floor(indexX);
+
+                console.log(intIndexX)
+                let isLineV = indexX - intIndexX < lineOffset || indexX - intIndexX > 1 - lineOffset;
+                if (isLineV) {
+                    console.log("x to y LINE");
+                }
+                const results = this.#SECOND_TO_LAST_LINE_BETS;
+                if (isLineV && x > this.offsetX + 4 * this.rectWidth - offsetInCase && x < this.offsetX + 9 * this.rectWidth) {
+                    console.log("LIIIINE");
+                    if (x < this.offsetX + 5 * this.rectWidth) {
+                        let betName = results[0] + "-" + results[1];
+                        let _x = this.offsetX + 4 * this.rectWidth;
+                        let _y = this.offsetY + this.rectHeight * 3 + (this.rectHeight / 2);
+                        this.#addBet(betName, _x, _y);
+                        return betName;
+                    }
+                    else {
+                        let betName = results[1] + "-" + results[2];
+                        let _x = this.offsetX + 2 * 4 * this.rectWidth;
+                        let _y = this.offsetY + this.rectHeight * 3 + (this.rectHeight / 2);
+                        this.#addBet(betName, _x, _y);
+                        return betName;
+                    }
+                }
+                else {
+                    for (let i = 0; i < results.length; i++) {
+                        if (x > this.offsetX + offsetInCase + i * 4 * this.rectWidth && x < this.offsetX - offsetInCase + (4 * (i + 1)) * this.rectWidth) {
+                            let _x = this.offsetX + offsetInCase + i * 4 * this.rectWidth + (this.rectWidth * 4 / 2);
+                            let _y = this.offsetY + offsetInCase + this.rectHeight * 3 + (this.rectHeight / 2);
+                            this.#addBet(results[i], _x, _y);
+                            return results[i];
+                        }
                     }
                 }
             }
             else if (y > this.offsetY + this.rectHeight * 4 + offsetInCase && y < this.offsetY + this.rectHeight * 5 - offsetInCase) {
                 // 1st half, even (pair), red, black, odd (impair), 2nd half
-                const results = ["1 to 18", "Even", "Red", "Black", "Odd", "19 to 36"];
+                const results = this.#LAST_LINE_BETS;
                 for (let i = 0; i < results.length; i++) {
                     if (x > this.offsetX + offsetInCase + 2 * i * this.rectWidth && x < this.offsetX - offsetInCase + (2 * (i + 1)) * this.rectWidth) {
                         let _x = this.offsetX + offsetInCase + 2 * i * this.rectWidth + (this.rectWidth * 2 / 2);
@@ -505,32 +586,58 @@ class Tapis {
     #getNumbersFromBetValue(betValue) {
         betValue = betValue + ""
         const lineBet = "line "; // line 1, line 2, line 3
-        const secondTolastLineBets = ["1 to 12", "13 to 24", "25 to 36"];
-        const lastLineBets = ["1 to 18", "Even", "Red", "Black", "Odd", "19 to 36"];
+        const secondToLastLineBetsCombine = [this.#SECOND_TO_LAST_LINE_BETS[0] + "-" + this.#SECOND_TO_LAST_LINE_BETS[1],
+        this.#SECOND_TO_LAST_LINE_BETS[1] + "-" + this.#SECOND_TO_LAST_LINE_BETS[2]]
         let numbers = [];
 
-        if (betValue.startsWith(lineBet) && betValue.match(/^line \d$/)) {
-            // line x (column)
-            let lineNb = +betValue[betValue.length - 1];
-            if (this.startNumber.some(n => n === lineNb)) {
-                for (let i = lineNb; i <= 36; i += 3) {
-                    numbers.push(i);
+        if (betValue.startsWith(lineBet)) {
+            if (betValue.match(/^line \d$/)) {
+                // line x (column)
+                let lineNb = +betValue[betValue.length - 1];
+                if (this.startNumber.some(n => n === lineNb)) {
+                    for (let i = lineNb; i <= 36; i += 3) {
+                        numbers.push(i);
+                    }
+                }
+                else {
+                    console.error("Invalid line number");
+                }
+            } else if (betValue.match(/^line (\d)-line (\d)$/)) {
+                let match = betValue.match(/^line (\d)-line (\d)$/)
+                for (let i = 1; i < match.length; i++) {
+                    let lineNb = +match[i];
+                    if (this.startNumber.some(n => n === lineNb)) {
+                        for (let i = lineNb; i <= 36; i += 3) {
+                            numbers.push(i);
+                        }
+                    }
+                    else {
+                        console.error("Invalid line number");
+                    }
                 }
             }
-            else {
-                console.error("Invalid line number");
-            }
         }
-        else if (betValue.match(/^\d{1,2} to \d{2}$/) && (secondTolastLineBets.indexOf(betValue) >= 0 || [0, lastLineBets.length - 1].some(v => v === lastLineBets.indexOf(betValue)))) {
+        else if (betValue.match(/^\d{1,2} to \d{2}$/) && (this.#SECOND_TO_LAST_LINE_BETS.indexOf(betValue) >= 0 || [0, this.#LAST_LINE_BETS.length - 1].some(v => v === this.#LAST_LINE_BETS.indexOf(betValue)))) {
             // x to y
             let min_max = betValue.split(" ").filter(v => !isNaN(+v)).map(v => +v);
             for (let i = min_max[0]; i <= min_max[1]; i++) {
                 numbers.push(i);
             }
         }
-        else if ([1, 2, 3, 4].some(v => v === lastLineBets.indexOf(betValue))) {
+        else if (betValue.match(/^\d{1,2} to \d{2}-\d{1,2} to \d{2}$/)) {
+            if (secondToLastLineBetsCombine.indexOf(betValue) >= 0) {
+                let match = betValue.match(/^(\d{1,2}) to \d{2}-\d{1,2} to (\d{2})$/);
+                for (let i = +match[1]; i <= +match[2]; i++) {
+                    numbers.push(i);
+                }
+            }
+            else {
+                throw new Error("Invalid betValue: " + betValue);
+            }
+        }
+        else if ([1, 2, 3, 4].some(v => v === this.#LAST_LINE_BETS.indexOf(betValue))) {
             // "Even", "Red", "Black", "Odd"
-            let index = lastLineBets.indexOf(betValue);
+            let index = this.#LAST_LINE_BETS.indexOf(betValue);
             for (let _n = 1; _n <= 36; _n++) {
                 let nb = -1;
                 if (index === 1 || index === 4) {
@@ -570,29 +677,41 @@ class Tapis {
     #setBetProba(bet) {
         let chance = bet.numbers.length / 37;
         // bet.proba = Math.round(((Math.round(chance * 10000) / 10000) * 100) * 100) / 100 + " % - ";
-        bet.proba = `${Math.floor(36 / bet.numbers.length) - 1}/1`;
-        bet.benef = (Math.floor(36 / bet.numbers.length) - 1) * bet.stake;
+        if (bet.numbers.length == 24) {
+            bet.proba = '1/2';
+            bet.benef = 0.5 * bet.stake;
+        }
+        else {
+            bet.proba = `${Math.floor(36 / bet.numbers.length) - 1}/1`;
+            bet.benef = (Math.floor(36 / bet.numbers.length) - 1) * bet.stake;
+        }
     }
 
     #addBet(bet, x, y) {
         if (this.#canPlaceBet) {
-            if (bet != null && bet !== -1) {
-                let sameBet = this.#bets.find((v) => v.value === bet);
-                if (sameBet) {
-                    this.changeStake(sameBet.value, this.stakeValue);
+            if (this.stats.canPlaceBet(this.stakeValue)) {
+                if (bet != null && bet !== -1) {
+                    let sameBet = this.#bets.find((v) => v.value === bet);
+                    if (sameBet) {
+                        this.changeStake(sameBet.value, this.stakeValue);
+                    }
+                    else {
+                        let newBet = { value: bet, coord: { x, y }, stake: this.stakeValue, numbers: [], proba: -1 };
+                        this.#bets.push(newBet);
+                        let div = document.getElementById(this.#betListContainerId);
+                        newBet.numbers = this.#getNumbersFromBetValue(newBet.value);
+                        this.#setBetProba(newBet);
+                        div.appendChild(this.createBetListItem(newBet));
+                        console.log("newBet: ", newBet);
+                        this.deleteBetList();
+                        this.displayTapis();
+                        this.writeBetList(true);
+                        this.stats.setStake(this.#bets);
+                    }
                 }
-                else {
-                    let newBet = { value: bet, coord: { x, y }, stake: this.stakeValue, numbers: [], proba: -1 };
-                    this.#bets.push(newBet);
-                    let div = document.getElementById(this.#betListContainerId);
-                    newBet.numbers = this.#getNumbersFromBetValue(newBet.value);
-                    this.#setBetProba(newBet);
-                    div.appendChild(this.createBetListItem(newBet));
-                    console.log("newBet: ", newBet);
-                    this.deleteBetList();
-                    this.displayTapis();
-                    this.writeBetList(true);
-                }
+            }
+            else {
+                alert("Mises > Banque");
             }
         }
         else {
@@ -663,6 +782,7 @@ class Tapis {
     }
 
     writeBetList(placeOnTapis = false) {
+        this.stats.refreshBank();
         let div = document.getElementById(this.#betListContainerId);
         for (const _bet of this.#bets) {
             if (placeOnTapis)
@@ -706,20 +826,26 @@ class Tapis {
 
     changeStake(betValue, stakeToAdd) {
         if (this.#canPlaceBet) {
-            let sameBet = this.#bets.find((v) => v.value === betValue);
-            if (sameBet) {
-                sameBet.stake += stakeToAdd;
-                if (sameBet.stake <= 0) {
-                    this.removeBet(sameBet.value);
-                } else {
-                    this.#setBetProba(sameBet);
+            if (this.stats.canPlaceBet(stakeToAdd)) {
+                let sameBet = this.#bets.find((v) => v.value === betValue);
+                if (sameBet) {
+                    sameBet.stake += stakeToAdd;
+                    if (sameBet.stake <= 0) {
+                        this.removeBet(sameBet.value);
+                    } else {
+                        this.#setBetProba(sameBet);
+                    }
+                    this.deleteBetList();
+                    this.displayTapis();
+                    this.writeBetList(true);
+                    this.stats.setStake(this.#bets);
                 }
-                this.deleteBetList();
-                this.displayTapis();
-                this.writeBetList(true);
+                else {
+                    console.warn("Can't find bet", betValue);
+                }
             }
             else {
-                console.warn("Can't find bet", betValue);
+                alert("Mises > Banque");
             }
         }
     }
@@ -786,6 +912,7 @@ class Tapis {
 
     stopBetting() {
         this.#canPlaceBet = false;
+        this.#betsHistory.push(this.#bets);
     }
 
     startBetting() {
@@ -801,5 +928,33 @@ class Tapis {
 
     getBets() {
         return JSON.parse(JSON.stringify(this.#bets));
+    }
+
+    playOldBets(sens) {
+        if (this.#betsHistory.length > 0) {
+            if (sens == -1) {
+                if (this.#betHistoryIndex <= 0) {
+                    this.#betHistoryIndex = 0;
+                }
+                else {
+                    this.#betHistoryIndex -= 1;
+                }
+            } else {
+                if (this.#betHistoryIndex >= this.#betsHistory.length - 1) {
+                    this.#betHistoryIndex = this.#betsHistory.length - 1;
+                }
+                else {
+                    this.#betHistoryIndex += 1;
+                }
+            }
+
+            this.stats.reset();
+            this.#bets = JSON.parse(JSON.stringify(this.#betsHistory[this.#betHistoryIndex]));
+            this.stats.setStake(this.#bets);
+            this.deleteBetList();
+            this.displayTapis();
+            this.writeBetList(true);
+            document.getElementById("bet-index").innerText = `${this.#betHistoryIndex + 1}/${this.#betsHistory.length}`
+        }
     }
 }

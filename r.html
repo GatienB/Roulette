@@ -78,6 +78,22 @@
         .row {
             display: flex;
         }
+
+        #money {
+            width: 90%;
+            text-align: right;
+            font-size: 1.5rem;
+            margin: 0.5rem 0rem;
+        }
+
+        #money span:nth-child(1) {
+            margin-right: 5rem;
+        }
+
+        #main {
+            display: flex;
+            flex-direction: column;
+        }
     </style>
     <script src="./scripts/TestRoulette.js"></script>
     <script src="./scripts/Roulette.js"></script>
@@ -89,18 +105,27 @@
     <!-- <label>Nombre de parts</label>
     <input id="input_splits" type="number" value="3" max="100" min="2" placeholder="Nombre de parts"
         onchange="displayCircle2()" /> -->
-    <div class="row">
-        <div class="bet-list_container">
-            <h2>Bets</h2>
-            <div id="bet-list"></div>
-            <h2>Bets stats</h2>
-            <div id="bet-stats"></div>
-        </div>
-        <div class="">
-            <div id="spin-output"></div>
-            <br>
-            <canvas id="roulette" height="300" width="600"></canvas>
-            <canvas id="tapis" height="300" width="600"></canvas>
+    <div id="main">
+        <div id="money"><span>Mise totale : <span id="stake-value"></span></span><span>Banque : <span
+                    id="bank-value"></span></span></div>
+        <div class="row">
+            <div class="bet-list_container">
+                <h2>Bets</h2>
+                <div id="bet-list"></div>
+                <h2>Bets stats</h2>
+                <div id="bet-stats"></div>
+                <div>
+                    <button id="playLastBetsBtn">&lt;</button>
+                    <span id="bet-index"></span>
+                    <button id="playNextBetsBtn">&gt;</button>
+                </div>
+            </div>
+            <div class="">
+                <div id="spin-output"></div>
+                <br>
+                <canvas id="roulette" height="300" width="600"></canvas>
+                <canvas id="tapis" height="300" width="600"></canvas>
+            </div>
         </div>
     </div>
     <!-- <canvas id="canvas" height="300" width="600"></canvas> -->
@@ -111,6 +136,10 @@
     async function spinAction(game) {
         if (game.roulette.canSpin()) {
             if (game.tapis.hasStake()) {
+                if (document.getElementById("playLastBetsBtn").onclick == null) {
+                    document.getElementById("playLastBetsBtn").onclick = () => playOldBets(game, -1)
+                    document.getElementById("playNextBetsBtn").onclick = () => playOldBets(game, 1)
+                }
                 game.tapis.stopBetting();
                 game.tapis.stats.saveBets(game.tapis.getBets());
                 let res = await game.roulette.spin();
@@ -131,6 +160,11 @@
         game.roulette.enableSpinning();
         game.tapis.clear();
         game.tapis.stats.clear();
+    }
+
+    function playOldBets(game, sens) {
+        resetAction(game);
+        game.tapis.playOldBets(sens);
     }
 
     // Mouse events
