@@ -119,6 +119,9 @@
                     <span id="bet-index"></span>
                     <button id="playNextBetsBtn">&gt;</button>
                 </div>
+                <div>
+                    <button id="simulationBtn">Simulate</button>
+                </div>
             </div>
             <div class="">
                 <div id="spin-output"></div>
@@ -167,6 +170,16 @@
         game.tapis.playOldBets(sens);
     }
 
+    function launchSimulation(game) {
+        if (game.tapis.hasStake()) {
+            let bets = game.tapis.getBets();
+            game.tapis.simulate()
+        }
+        else {
+            alert("Place a bet before spinning the wheel.");
+        }
+    }
+
     // Mouse events
     // function getMousePosition(canvas, event) {
     //     let rect = canvas.getBoundingClientRect();
@@ -204,6 +217,8 @@
 
         game.tapis.startBetting();
         game.roulette.enableSpinning();
+
+        document.getElementById("simulationBtn").onclick = () => launchSimulation(game);
     }
 
     main();

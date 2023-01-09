@@ -5,7 +5,7 @@ class Roulette {
     constructor() {
         this.ROULETTE_RADIUS = 150;
     }
-    
+
     #getNumberColor(number) {
         const indexNb0 = this.getNumberIndex(0);
         let indexNb = this.getNumberIndex(number);
@@ -264,6 +264,11 @@ class Roulette {
             // divOut.innerText = numbers[i];
             return numbers[i];
         }
+    }
+
+    spinLite() {
+        const numbers = this.#getRouletteNumberFrom0To2piCounterclockwise();
+        return numbers[this.getRandomNumber(0, numbers.length - 1)]
     }
 
     #moveArrowToNumber(number) {

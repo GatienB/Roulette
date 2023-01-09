@@ -81,6 +81,10 @@ class BetStats {
         this.#stakeTotal = 0;
         this.refreshBank();
     }
+
+    getBank() {
+        return this.#bank;
+    }
 }
 
 class Tapis {
@@ -955,6 +959,50 @@ class Tapis {
             this.displayTapis();
             this.writeBetList(true);
             document.getElementById("bet-index").innerText = `${this.#betHistoryIndex + 1}/${this.#betsHistory.length}`
+        }
+    }
+
+    simulate() {
+        if (this.hasStake() || true) {
+            let meanBank = this.stats.getBank(),
+                maxBank = this.stats.getBank(),
+                minBank = this.stats.getBank(),
+                counter = 0;
+            for (let i = 1; i <= 1000; i++) {
+                if (i % 2 == 0) {
+                    this.#bets = [{ value: "line 2", coord: { x: 1, y: 1 }, stake: this.stakeValue, numbers: this.#getNumbersFromBetValue("line 2") },
+                    { value: "Red", coord: { x: 1, y: 1 }, stake: this.stakeValue, numbers: this.#getNumbersFromBetValue("Red") }];
+                }
+                else {
+                    this.#bets = [{ value: "line 2", coord: { x: 1, y: 1 }, stake: this.stakeValue, numbers: this.#getNumbersFromBetValue("line 2") },
+                    { value: "Black", coord: { x: 1, y: 1 }, stake: this.stakeValue, numbers: this.#getNumbersFromBetValue("Black") }];
+                }
+                this.#bets.forEach(b => {
+                    this.#setBetProba(b);
+                });
+                this.roulette.enableSpinning();
+                if (this.stats.getBank() - (this.stakeValue * this.#bets.length) >= 0) {
+                    let res = this.roulette.spinLite();
+                    console.log("result: ", res)
+                    this.stats.showStats(res);
+                    this.highlightBets(res);
+                    meanBank += this.stats.getBank();
+                    if (this.stats.getBank() > maxBank)
+                        maxBank = this.stats.getBank();
+                    if (this.stats.getBank() < minBank)
+                        minBank = this.stats.getBank();
+                    counter += 1;
+                }
+                else {
+                    console.log("Banqueroute, i=" + i);
+                    break;
+                }
+                console.log(`${i} - ${this.stats.getBank()}`);
+            }
+
+            meanBank = meanBank / counter;
+
+            console.log(`Mean: ${meanBank}\nMax: ${maxBank}\nMin: ${minBank}`);
         }
     }
 }
