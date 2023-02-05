@@ -1,0 +1,44 @@
+.bet-list-item {
+    display: flex;
+    align-items: center;
+    margin-left: 5px;
+}
+
+.bet-list-item .bullet {
+    height: 10px;
+    width: 10px;
+    border-radius: 50%;
+}
+
+.bet-list-item .bullet.won {
+    background: rgb(0,230,0);
+}
+
+.bet-list-item .bullet.lost {
+    background: red;
+}
+
+.bet-list-item .bet-value {
+    width: 30%;
+    min-width: 100px;
+}
+
+.bet-list-item .btn-change_stake {
+    width: 20px;
+    background: transparent;
+    border: none;
+    font-size: 30px;
+    color: #5f5fce;
+    margin: 0 5px;
+    cursor: pointer;
+}
+
+.bet-list-item .stake {
+    width: 15%;
+    min-width: 80px;
+    word-break: break-all;
+}
+
+.bet-list-item .proba {
+    margin-left: 10px;
+}

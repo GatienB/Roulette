@@ -1,130 +1,67 @@
-class BetStats {
-    #bankValueId = "bank-value";
-    #stakeValueId = "stake-value";
-    #outputDivId = "bet-stats";
-    #tapis = null;
-    #initialBank = 100;
-    #bank;
-    #stakeTotal = 0;
+import React from "react"
+import {
+    getNumberColor
+} from "../../helpers/roulette-helper";
+import { Bet } from "../../models/BetModel";
+import './Tapis.css';
 
-    constructor(tapis) {
-        this.#initStats();
-        this.#tapis = tapis;
-        this.#bank = this.#initialBank;
-        this.refreshBank();
-    }
-
-    #initStats() {
-        this.stats = {
-            totalBets: 0,
-            totalStake: 0,
-            potentialWinPerNumber: {}
-        }
-    }
-
-    getNetGainByNumber(wonLostBets) {
-        if (wonLostBets && (wonLostBets.won.length > 0 || wonLostBets.lost.length > 0)) {
-            const stakeLost = wonLostBets.lost.reduce((total, next) => { /*console.log(total, next);*/ return total + next.stake }, 0);
-            const benefits = wonLostBets.won.reduce((total, next) => { return total + next.benef }, 0);
-            return benefits - stakeLost;
-        }
-        return -Infinity;
-    }
-
-    saveBets(bets) {
-        if (bets && bets.length > 0) {
-            this.stats.totalStake = bets.reduce((tot, next) => { return tot + next.stake; }, 0);
-            this.stats.totalBets = bets.length;
-            this.stats.bets = JSON.parse(JSON.stringify(bets));
-        }
-    }
-
-    showStats(nbResult) {
-        let div = document.getElementById(this.#outputDivId);
-        div.innerText = `Bets : ${this.stats.totalBets}\nStake : ${this.stats.totalStake}\n`;
-        let betsResult = this.#tapis.getWinBets(nbResult);
-        console.log(betsResult);
-        div.innerText += `Bets won : ${betsResult.won.length}`;
-        let benef = this.getNetGainByNumber(betsResult);
-        div.innerText += `\nGains : ${benef} €`;
-        this.#bank += benef;
-        this.#stakeTotal = 0;
-        this.refreshBank();
-    }
-
-    clear() {
-        let div = document.getElementById(this.#outputDivId);
-        while (div.hasChildNodes()) {
-            div.removeChild(div.lastChild);
-        }
-        this.reset();
-    }
-
-    setStake(bets) {
-        this.#stakeTotal = 0;
-        bets.forEach(b => {
-            this.#stakeTotal += b.stake
-        });
-        this.refreshBank();
-    }
-
-    refreshBank() {
-        document.getElementById(this.#bankValueId).innerText = this.#bank;
-        document.getElementById(this.#stakeValueId).innerText = this.#stakeTotal;
-    }
-
-    canPlaceBet(stake) {
-        return this.#bank - (stake + this.#stakeTotal) >= 0;
-    }
-
-    reset() {
-        this.#stakeTotal = 0;
-        this.refreshBank();
-    }
-
-    getBank() {
-        return this.#bank;
-    }
+type TapisProps = {
+    offsetX?: number, offsetY?: number,
+    initialBank: number,
+    refreshBank: Function,
+    updateBetsList: Function,
+    isBettingLocked: boolean
 }
 
-class Tapis {
-    #tapisCanvasId = "tapis";
-    #betListContainerId = "bet-list";
-    rectWidth = 40;
-    rectHeight = 50;
-    lineOffsetPixels = 6;
-    startNumber = [3, 2, 1]
-    step = 3
-    roulette = null
-    #bets = [];
-    #canPlaceBet = false;
-    stakeValue = 10;
-    #betsHistory = [];
-    #betHistoryIndex = -1;
+class Tapis extends React.Component<TapisProps, { bank: number, stakeTotal: number }> {
+    #canvasRef: React.RefObject<HTMLCanvasElement>;
+    offsetX: number;
+    offsetY: number;
+    rectWidth: number = 40;
+    rectHeight: number = 50;
+    #bets: Bet[];
 
+    #START_NUMBERS: number[] = [3, 2, 1];
+    #STEP: number = 3;
+    #LINE_OFFSET_PIXELS: number = 6;
     #SECOND_TO_LAST_LINE_BETS = ["1 to 12", "13 to 24", "25 to 36"];
     #LAST_LINE_BETS = ["1 to 18", "Even", "Red", "Black", "Odd", "19 to 36"];
 
-    constructor(offsetX = 70, offsetY = 30) {
-        this.offsetX = offsetX;
-        this.offsetY = offsetY;
-        this.roulette = new Roulette();
-        this.stats = new BetStats(this);
-    }
+    // #canPlaceBet: boolean = true;
+    stakeValue: number = 10;
 
-    getNumberColor(number) {
-        const indexNb0 = this.roulette.getNumberIndex(0);
-        let indexNb = this.roulette.getNumberIndex(number);
-        if (indexNb > indexNb0) {
-            indexNb -= 1;
+    constructor(props: any) {
+        // console.log("Tapis", props);
+        super(props);
+        this.#canvasRef = React.createRef();
+        this.offsetX = props.offsetX || 70;
+        this.offsetY = props.offsetY || 30;
+        this.#bets = [];
+
+        this.state = {
+            bank: props.initialBank,
+            stakeTotal: 0
         }
-        return (indexNb % 2 == 1 ? "red" : "black");
     }
 
-    displayTapis(nbResult = -1/*offsetX = 100, offsetY = 50*/) {
+    componentDidMount(): void {
+        this.displayTapis()
+    }
+
+    onMouseDown(event: any) {
+        this.getClickedPosition(event);
+    }
+
+    render(): React.ReactNode {
+        return (
+            <canvas ref={this.#canvasRef} id="tapis" height="300" width="600" onMouseDown={(e) => this.onMouseDown(e)}></canvas>
+        )
+    }
+
+    displayTapis(nbResult = -1) {
         let offsetX = this.offsetX, offsetY = this.offsetY;
-        let c = document.getElementById(this.#tapisCanvasId);
-        let ctx = c.getContext("2d");
+        let c = this.#canvasRef.current as HTMLCanvasElement;
+        let ctx = c.getContext("2d") as CanvasRenderingContext2D;
         ctx.strokeStyle = "white";
         ctx.lineWidth = 1;
         const rectWidth = this.rectWidth, rectHeight = this.rectHeight;
@@ -137,10 +74,10 @@ class Tapis {
                 ctx.beginPath();
                 let x = offsetX + rectWidth * col;
                 let y = offsetY + rectHeight * row;
-                ctx.fillStyle = col < 12 ? this.getNumberColor(nb) : "transparent"
+                ctx.fillStyle = col < 12 ? getNumberColor(nb) : "transparent"
                 ctx.rect(x, y, rectWidth, rectHeight)
                 ctx.fill()
-                let gain = this.stats.getNetGainByNumber(this.getWinBets(nb));
+                let gain = this.getNetGainByNumber(this.getWinBets(nb));
                 if (col < 12 && this.hasStake() && gain != -Infinity && this.#bets.some(b => b.numbers.indexOf(nb) >= 0)) {
                     // ctx.fillStyle = nb !== nbResult ? "white" : "rgb(0,230,0)";
                     ctx.fillStyle = "white";
@@ -156,11 +93,11 @@ class Tapis {
                 ctx.fillStyle = "white";
                 // ctx.strokeText(nb, rectWidth * col, rectHeight * row + 10)
                 if (nb < 10) {
-                    ctx.fillText(nb, -25, 25);
+                    ctx.fillText(nb + '', -25, 25);
                 }
                 else {
                     if (col < 12)
-                        ctx.fillText(nb, -30, 25);
+                        ctx.fillText(nb + '', -30, 25);
                     else {
                         ctx.font = "12px Arial";
                         ctx.fillText("2 to 1", -35, 25);
@@ -177,7 +114,7 @@ class Tapis {
         ctx.lineTo(offsetX - rectWidth - 5, offsetY + rectHeight * 1.5);
         ctx.lineTo(offsetX - rectWidth, offsetY + rectHeight * 3);
         ctx.lineTo(offsetX, offsetY + rectHeight * 3);
-        let gain = this.stats.getNetGainByNumber(this.getWinBets(0));
+        let gain = this.getNetGainByNumber(this.getWinBets(0));
         if (this.hasStake() && gain != -Infinity && this.#bets.some(b => b.numbers.indexOf(0) >= 0)) {
             // ctx.fillStyle = 0 !== nbResult ? "white" : "rgb(0,230,0)";
             ctx.fillStyle = "white";
@@ -221,13 +158,68 @@ class Tapis {
             ctx.fillText(labelsL2[rect], x + rectWidth / 3, y + rectHeight / 1.5)
             ctx.stroke();
         }
+    }
 
+    getWinBets(nbResult: number) {
+        // { value: bet, coord: { x, y }, stake: this.stakeValue, numbers: [] };
+        let wonBets = [];
+        let lostBets = [];
+        if (this.#bets && this.#bets.length > 0) {
+            for (const bet of this.#bets) {
+                if (bet.numbers.some(n => n === nbResult)) {
+                    wonBets.push(bet);
+                }
+                else {
+                    lostBets.push(bet);
+                }
+            }
+        }
+
+        return { won: wonBets, lost: lostBets };
+    }
+
+    getNetGainByNumber(wonLostBets: { won: Bet[], lost: Bet[] }) {
+        if (wonLostBets && (wonLostBets.won.length > 0 || wonLostBets.lost.length > 0)) {
+            const stakeLost = wonLostBets.lost.reduce((total: number, next: Bet) => { return total + next.stake }, 0);
+            const benefits = wonLostBets.won.reduce((total: number, next: Bet) => { return total + next.benef }, 0);
+            return benefits - stakeLost;
+        }
+        return -Infinity;
+    }
+
+    getClickedPosition(event: any) {
+        const canvas = this.#canvasRef.current as HTMLCanvasElement;
+        let rect = canvas.getBoundingClientRect();
+        let x = event.clientX - rect.left;
+        let y = event.clientY - rect.top;
+        let bet = this.getBetFromCoords(x, y);
+        console.log(bet)
+    }
+
+    getBetFromCoords(x: number, y: number) {
+        if (this.isInNumberArea(x, y)) {
+            return this.getNumberFromCoords(x, y);
+        }
+        else if (this.isInBottomBets(x, y)) {
+            return this.getBottomBetFromCoords(x, y);
+        }
+
+        return null;
+    }
+
+    isInBottomBets(x: number, y: number) {
+        if (x > this.offsetX && x < (this.offsetX + this.rectWidth * 12)
+            && y > this.offsetY + this.rectHeight * 3 && y < this.offsetY + this.rectHeight * 5) {
+            console.log("In bottom bets");
+            return true;
+        }
+        return false;
     }
 
     /* Return true if (x,y) is in number area */
-    isInNumberArea(x, y) {
-        if (x > (this.offsetX - this.rectWidth - 5 - this.lineOffsetPixels) && x < (this.offsetX + this.rectWidth * 13 + this.lineOffsetPixels)
-            && y > this.offsetY - this.lineOffsetPixels && y < this.offsetY + this.rectHeight * 3 + this.lineOffsetPixels) {
+    isInNumberArea(x: number, y: number) {
+        if (x > (this.offsetX - this.rectWidth - 5 - this.#LINE_OFFSET_PIXELS) && x < (this.offsetX + this.rectWidth * 13 + this.#LINE_OFFSET_PIXELS)
+            && y > this.offsetY - this.#LINE_OFFSET_PIXELS && y < this.offsetY + this.rectHeight * 3 + this.#LINE_OFFSET_PIXELS) {
             // console.log("In numbers");
             return true;
         }
@@ -235,47 +227,9 @@ class Tapis {
         return false;
     }
 
-    getColumnValues(intIndexX) {
-        let str = "";
-        let isPrefix0 = false;
-        for (let i = this.startNumber.length - 1; i >= 0; i--) {
-            const elmt = this.startNumber[i];
-            if (intIndexX < 0) {
-                if (!isPrefix0) {
-                    str = "0-" + str;
-                    isPrefix0 = true;
-                }
-                continue;
-            }
-            str += (elmt + (intIndexX * this.step)) + "-";
-        }
-        return str.substring(0, str.length - 1);
-    }
+    //#region Define bet from coords
 
-    getCarre(intIndexX, intIndexYStart) {
-        let str = "";
-        let isPrefix0 = false;
-        if (intIndexYStart >= 0 && intIndexYStart < this.startNumber.length) {
-            // get Carré
-            for (let j = intIndexX; j <= intIndexX + 1; j++) {
-                for (let i = intIndexYStart; i > intIndexYStart - 2; i--) {
-                    const elmt = this.startNumber[i];
-                    if (j < 0) {
-                        if (!isPrefix0) {
-                            str = "0-" + str;
-                            isPrefix0 = true;
-                        }
-                        continue;
-                    }
-                    str += (elmt + (j * this.step)) + "-";
-                }
-            }
-            return str.substring(0, str.length - 1);
-        }
-        return "";
-    }
-
-    getNumberFromCoords(x, y) {
+    getNumberFromCoords(x: number, y: number) {
         if (this.isInNumberArea(x, y)) {
             const lineOffset = 1 / 10;
             let indexX = (x - this.offsetX) / this.rectWidth,
@@ -322,8 +276,8 @@ class Tapis {
                         return `line ${3 - intIndexY}`;
                     }
 
-                    this.addBetSingleNumber(this.startNumber[intIndexY] + (intIndexX * this.step));
-                    return this.startNumber[intIndexY] + (intIndexX * this.step);
+                    this.addBetSingleNumber(this.#START_NUMBERS[intIndexY] + (intIndexX * this.#STEP));
+                    return this.#START_NUMBERS[intIndexY] + (intIndexX * this.#STEP);
                 }
             } else if (isLineV && !isLineH) {
                 if (intIndexX === 12)
@@ -331,27 +285,27 @@ class Tapis {
                 else if (indexX < -1 || intIndexX > 12 || indexX < -1 + lineOffset)
                     return -1;
                 else if (/*intIndexX === 0 || */intIndexX === 11) {
-                    this.addBetSingleNumber(this.startNumber[intIndexY] + (intIndexX * this.step));
-                    return this.startNumber[intIndexY] + (intIndexX * this.step);
+                    this.addBetSingleNumber(this.#START_NUMBERS[intIndexY] + (intIndexX * this.#STEP));
+                    return this.#START_NUMBERS[intIndexY] + (intIndexX * this.#STEP);
                 }
                 else if (intIndexY >= 0 && intIndexY < 3) {
                     if (intIndexX === -1 || (indexX <= lineOffset && indexX >= -lineOffset)) {
                         let _y = this.offsetY + intIndexY * this.rectHeight + this.rectHeight / 2;
-                        this.#addBet("0-" + this.startNumber[intIndexY], this.offsetX, _y);
-                        return "0-" + this.startNumber[intIndexY];
+                        this.#addBet("0-" + this.#START_NUMBERS[intIndexY], this.offsetX, _y);
+                        return "0-" + this.#START_NUMBERS[intIndexY];
                     }
                     if (Math.ceil(indexX) - indexX <= lineOffset) {
                         // click on end of rect (right)
                         let _x = this.offsetX + (intIndexX + 1) * this.rectWidth;
                         let _y = this.offsetY + intIndexY * this.rectHeight + this.rectHeight / 2;
-                        let bet = (this.startNumber[intIndexY] + (intIndexX * this.step)) + "-" + (this.startNumber[intIndexY] + ((intIndexX + 1) * this.step));
+                        let bet = (this.#START_NUMBERS[intIndexY] + (intIndexX * this.#STEP)) + "-" + (this.#START_NUMBERS[intIndexY] + ((intIndexX + 1) * this.#STEP));
                         this.#addBet(bet, _x, _y);
                         return bet;
                     } else {
                         // click on start of rect (left)
                         let _x = this.offsetX + intIndexX * this.rectWidth;
                         let _y = this.offsetY + intIndexY * this.rectHeight + this.rectHeight / 2;
-                        let bet = (this.startNumber[intIndexY] + (intIndexX * this.step)) + "-" + (this.startNumber[intIndexY] + ((intIndexX - 1) * this.step));
+                        let bet = (this.#START_NUMBERS[intIndexY] + (intIndexX * this.#STEP)) + "-" + (this.#START_NUMBERS[intIndexY] + ((intIndexX - 1) * this.#STEP));
                         this.#addBet(bet, _x, _y);
                         return bet;
                     }
@@ -390,7 +344,7 @@ class Tapis {
                         else {
                             let _x = this.offsetX + intIndexX * this.rectWidth + this.rectWidth / 2;
                             let _y = this.offsetY + (intIndexY + 1) * this.rectHeight;
-                            let bet = (this.startNumber[intIndexY + 1] + (intIndexX * this.step)) + "-" + (this.startNumber[intIndexY] + (intIndexX * this.step));
+                            let bet = (this.#START_NUMBERS[intIndexY + 1] + (intIndexX * this.#STEP)) + "-" + (this.#START_NUMBERS[intIndexY] + (intIndexX * this.#STEP));
                             this.#addBet(bet, _x, _y);
                             return bet;
                         }
@@ -405,7 +359,7 @@ class Tapis {
                         else {
                             let _x = this.offsetX + intIndexX * this.rectWidth + this.rectWidth / 2;
                             let _y = this.offsetY + intIndexY * this.rectHeight;
-                            let bet = (this.startNumber[intIndexY] + (intIndexX * this.step)) + "-" + (this.startNumber[intIndexY - 1] + (intIndexX * this.step));
+                            let bet = (this.#START_NUMBERS[intIndexY] + (intIndexX * this.#STEP)) + "-" + (this.#START_NUMBERS[intIndexY - 1] + (intIndexX * this.#STEP));
                             this.#addBet(bet, _x, _y);
                             return bet;
                         }
@@ -467,7 +421,7 @@ class Tapis {
         return -1;
     }
 
-    getBottomBetFromCoords(x, y) {
+    getBottomBetFromCoords(x: number, y: number) {
         if (this.isInBottomBets(x, y)) {
             let offsetInCase = 5;
             if (y > this.offsetY + this.rectHeight * 3 + offsetInCase && y < this.offsetY + this.rectHeight * 4 - offsetInCase) {
@@ -540,55 +494,77 @@ class Tapis {
         return "";
     }
 
-    isInBottomBets(x, y) {
-        if (x > this.offsetX && x < (this.offsetX + this.rectWidth * 12)
-            && y > this.offsetY + this.rectHeight * 3 && y < this.offsetY + this.rectHeight * 5) {
-            console.log("In bottom bets");
-            return true;
-        }
-        return false;
-    }
+    //#endregion
 
-    getBetFromCoord(x, y) {
-        if (this.isInNumberArea(x, y)) {
-            return this.getNumberFromCoords(x, y);
-        }
-        else if (this.isInBottomBets(x, y)) {
-            return this.getBottomBetFromCoords(x, y);
-        }
-
-        return null;
-    }
-
-    addBetColumn(bet, colIndex, isClickOnTop) {
+    addBetColumn(bet: string, colIndex: number, isClickOnTop: boolean) {
         let _x = this.offsetX + colIndex * this.rectWidth + this.rectWidth / 2;
         let _y = this.offsetY + (isClickOnTop ? 0 : 3) * this.rectHeight;
         this.#addBet(bet, _x, _y);
     }
 
-    addBetSingleNumber(nb) {
+    addBetSingleNumber(nb: number) {
         if (nb > 0) {
-            for (let start = this.startNumber.length - 1; start >= 0; start--) {
-                let n = this.startNumber[start];
-                for (let j = 0; j < 36 / this.startNumber.length; j++) {
+            for (let start = this.#START_NUMBERS.length - 1; start >= 0; start--) {
+                let n = this.#START_NUMBERS[start];
+                for (let j = 0; j < 36 / this.#START_NUMBERS.length; j++) {
                     if (n === nb) {
                         let _x = this.offsetX + j * this.rectWidth + this.rectWidth / 2;
                         let _y = this.offsetY + start * this.rectHeight + this.rectHeight / 2;
-                        this.#addBet(nb, _x, _y);
+                        this.#addBet(nb + '', _x, _y);
                     }
-                    n += this.step;
+                    n += this.#STEP;
                 }
             }
         }
         else {
             let _x = this.offsetX - this.rectWidth / 2;
             let _y = this.offsetY + this.rectHeight * 1.5;
-            this.#addBet(nb, _x, _y);
+            this.#addBet(nb + '', _x, _y);
         }
     }
 
-    #getNumbersFromBetValue(betValue) {
-        betValue = betValue + ""
+    getColumnValues(intIndexX: number) {
+        let str = "";
+        let isPrefix0 = false;
+        for (let i = this.#START_NUMBERS.length - 1; i >= 0; i--) {
+            const elmt = this.#START_NUMBERS[i];
+            if (intIndexX < 0) {
+                if (!isPrefix0) {
+                    str = "0-" + str;
+                    isPrefix0 = true;
+                }
+                continue;
+            }
+            str += (elmt + (intIndexX * this.#STEP)) + "-";
+        }
+        return str.substring(0, str.length - 1);
+    }
+
+    getCarre(intIndexX: number, intIndexYStart: number) {
+        let str = "";
+        let isPrefix0 = false;
+        if (intIndexYStart >= 0 && intIndexYStart < this.#START_NUMBERS.length) {
+            // get Carré
+            for (let j = intIndexX; j <= intIndexX + 1; j++) {
+                for (let i = intIndexYStart; i > intIndexYStart - 2; i--) {
+                    const elmt = this.#START_NUMBERS[i];
+                    if (j < 0) {
+                        if (!isPrefix0) {
+                            str = "0-" + str;
+                            isPrefix0 = true;
+                        }
+                        continue;
+                    }
+                    str += (elmt + (j * this.#STEP)) + "-";
+                }
+            }
+            return str.substring(0, str.length - 1);
+        }
+        return "";
+    }
+
+
+    #getNumbersFromBetValue(betValue: string) {
         const lineBet = "line "; // line 1, line 2, line 3
         const secondToLastLineBetsCombine = [this.#SECOND_TO_LAST_LINE_BETS[0] + "-" + this.#SECOND_TO_LAST_LINE_BETS[1],
         this.#SECOND_TO_LAST_LINE_BETS[1] + "-" + this.#SECOND_TO_LAST_LINE_BETS[2]]
@@ -598,7 +574,7 @@ class Tapis {
             if (betValue.match(/^line \d$/)) {
                 // line x (column)
                 let lineNb = +betValue[betValue.length - 1];
-                if (this.startNumber.some(n => n === lineNb)) {
+                if (this.#START_NUMBERS.some(n => n === lineNb)) {
                     for (let i = lineNb; i <= 36; i += 3) {
                         numbers.push(i);
                     }
@@ -607,10 +583,10 @@ class Tapis {
                     console.error("Invalid line number");
                 }
             } else if (betValue.match(/^line (\d)-line (\d)$/)) {
-                let match = betValue.match(/^line (\d)-line (\d)$/)
+                let match = betValue.match(/^line (\d)-line (\d)$/) || [];
                 for (let i = 1; i < match.length; i++) {
                     let lineNb = +match[i];
-                    if (this.startNumber.some(n => n === lineNb)) {
+                    if (this.#START_NUMBERS.some(n => n === lineNb)) {
                         for (let i = lineNb; i <= 36; i += 3) {
                             numbers.push(i);
                         }
@@ -630,7 +606,7 @@ class Tapis {
         }
         else if (betValue.match(/^\d{1,2} to \d{2}-\d{1,2} to \d{2}$/)) {
             if (secondToLastLineBetsCombine.indexOf(betValue) >= 0) {
-                let match = betValue.match(/^(\d{1,2}) to \d{2}-\d{1,2} to (\d{2})$/);
+                let match = betValue.match(/^(\d{1,2}) to \d{2}-\d{1,2} to (\d{2})$/) || [];
                 for (let i = +match[1]; i <= +match[2]; i++) {
                     numbers.push(i);
                 }
@@ -650,7 +626,7 @@ class Tapis {
                 }
                 else {
                     // "Red", "Black"
-                    let c = this.getNumberColor(_n);
+                    let c = getNumberColor(_n);
                     nb = c === betValue.toLowerCase() ? _n : -1;
                 }
 
@@ -667,8 +643,8 @@ class Tapis {
             // several numbers : x-x, x-x-x, x-x-x-x, x-x-x-x-x-x
             let nbs = betValue.split("-");
             for (const n of nbs) {
-                if (n.length === 0 || isNaN(n))
-                    throw new Error("Invalid number list", betValue);
+                if (n.length === 0 || isNaN(+n))
+                    throw new Error("Invalid number list " + betValue);
                 else {
                     numbers.push(+n);
                 }
@@ -678,8 +654,8 @@ class Tapis {
         return numbers;
     }
 
-    #setBetProba(bet) {
-        let chance = bet.numbers.length / 37;
+    #setBetProba(bet: Bet) {
+        // let chance = bet.numbers.length / 37;
         // bet.proba = Math.round(((Math.round(chance * 10000) / 10000) * 100) * 100) / 100 + " % - ";
         if (bet.numbers.length == 24) {
             bet.proba = '1/2';
@@ -691,26 +667,27 @@ class Tapis {
         }
     }
 
-    #addBet(bet, x, y) {
-        if (this.#canPlaceBet) {
-            if (this.stats.canPlaceBet(this.stakeValue)) {
-                if (bet != null && bet !== -1) {
+    #addBet(bet: string, x: number, y: number) {
+        if (!this.props.isBettingLocked) {
+            if (this.canPlaceBet(this.stakeValue)) {
+                if (bet != null && +bet !== -1) {
                     let sameBet = this.#bets.find((v) => v.value === bet);
                     if (sameBet) {
                         this.changeStake(sameBet.value, this.stakeValue);
                     }
                     else {
-                        let newBet = { value: bet, coord: { x, y }, stake: this.stakeValue, numbers: [], proba: -1 };
+                        let newBet = new Bet(bet, this.stakeValue, x, y)
                         this.#bets.push(newBet);
-                        let div = document.getElementById(this.#betListContainerId);
+                        // let div = document.getElementById(this.#betListContainerId);
                         newBet.numbers = this.#getNumbersFromBetValue(newBet.value);
                         this.#setBetProba(newBet);
-                        div.appendChild(this.createBetListItem(newBet));
-                        console.log("newBet: ", newBet);
-                        this.deleteBetList();
+                        // div.appendChild(this.createBetListItem(newBet));
+                        // console.log("newBet: ", newBet);
+                        // this.deleteBetList();
                         this.displayTapis();
                         this.writeBetList(true);
-                        this.stats.setStake(this.#bets);
+                        this.setStake();
+                        this.props.updateBetsList(this.#bets.slice());
                     }
                 }
             }
@@ -723,86 +700,16 @@ class Tapis {
         }
     }
 
-    createBetListItem(bet) {
-        let d = document.createElement("div");
-        // d.style.width = "100%";
-        d.style.display = "flex";
-        d.style.alignItems = "center";
-        d.style.marginLeft = "5px";
-
-        let spanResult = document.createElement("span");
-        spanResult.style.height = "10px";
-        spanResult.style.width = "10px";
-        spanResult.style.borderRadius = "50%";
-        spanResult.setAttribute("data", "bullet");
-
-        let span_betvalue = document.createElement("span");
-        let span_stake = document.createElement("span");
-        let b_del = document.createElement("button");
-        let b_plus = document.createElement("button");
-        let b_minus = document.createElement("button");
-        let span_proba = document.createElement("span");
-
-        span_betvalue.setAttribute("data", "bet-value");
-        span_betvalue.style.width = "30%";
-        span_betvalue.style.minWidth = "100px";
-        span_betvalue.innerText = bet.value;
-
-        span_stake.style.width = "15%";
-        span_stake.style.minWidth = "80px";
-        span_stake.style.wordBreak = "break-all";
-        span_stake.innerText = bet.stake + " €";
-
-        span_proba.innerText = bet.proba;
-        span_proba.style.marginLeft = "10px";
-
-        b_del.onclick = () => this.removeBet(bet.value);
-        b_del.classList.add("btn-delete");
-        b_del.title = "Delete";
-
-        b_minus.innerText = "-";
-        b_minus.onclick = () => this.changeStake(bet.value, -this.stakeValue);
-        b_minus.classList.add("btn-change_stake");
-        b_plus.innerText = "+";
-        b_plus.onclick = () => this.changeStake(bet.value, this.stakeValue);
-        b_plus.classList.add("btn-change_stake");
-
-        d.append(spanResult);
-        d.append(span_betvalue);
-        d.append(b_minus);
-        d.append(span_stake);
-        d.append(b_plus);
-        d.append(b_del);
-        d.append(span_proba);
-
-        return d;
-    }
-
-    deleteBetList() {
-        let div = document.getElementById(this.#betListContainerId);
-        while (div.hasChildNodes()) {
-            div.removeChild(div.lastChild);
-        }
-    }
-
-    writeBetList(placeOnTapis = false) {
-        this.stats.refreshBank();
-        let div = document.getElementById(this.#betListContainerId);
-        for (const _bet of this.#bets) {
-            if (placeOnTapis)
-                this.placeBet(_bet.coord.x, _bet.coord.y);
-            div.appendChild(this.createBetListItem(_bet));
-        }
-    }
-
-    removeBet(betValue) {
-        if (this.#canPlaceBet) {
+    removeBet(betValue: string) {
+        if (!this.props.isBettingLocked) {
             let i = this.#bets.findIndex(v => v.value === betValue);
             if (i >= 0) {
                 this.#bets.splice(i, 1);
-                this.deleteBetList();
+                // this.deleteBetList();
                 this.displayTapis();
                 this.writeBetList(true);
+                this.props.updateBetsList(this.#bets.slice());
+                this.setStake();
             }
             else {
                 console.warn("Can't find betValue", betValue);
@@ -810,10 +717,20 @@ class Tapis {
         }
     }
 
-    placeBet(x, y) {
+    writeBetList(placeOnTapis = false) {
+        this.props.refreshBank({ bank: this.state.bank, totalStake: this.state.stakeTotal });
+        // let div = document.getElementById(this.#betListContainerId);
+        for (const _bet of this.#bets) {
+            if (placeOnTapis)
+                this.placeBet(_bet.coord.x, _bet.coord.y);
+            // div.appendChild(this.createBetListItem(_bet));
+        }
+    }
+
+    placeBet(x: number, y: number) {
         if (x && y) {
-            let c = document.getElementById(this.#tapisCanvasId);
-            let ctx = c.getContext("2d");
+            const c = this.#canvasRef.current as HTMLCanvasElement;
+            let ctx = c.getContext("2d") as CanvasRenderingContext2D;
             ctx.strokeStyle = "white";
             ctx.lineWidth = 2.5
             ctx.beginPath();
@@ -828,9 +745,9 @@ class Tapis {
         }
     }
 
-    changeStake(betValue, stakeToAdd) {
-        if (this.#canPlaceBet) {
-            if (this.stats.canPlaceBet(stakeToAdd)) {
+    changeStake(betValue: string, stakeToAdd: number) {
+        if (!this.props.isBettingLocked) {
+            if (this.canPlaceBet(stakeToAdd)) {
                 let sameBet = this.#bets.find((v) => v.value === betValue);
                 if (sameBet) {
                     sameBet.stake += stakeToAdd;
@@ -838,11 +755,11 @@ class Tapis {
                         this.removeBet(sameBet.value);
                     } else {
                         this.#setBetProba(sameBet);
+                        this.setStake();
                     }
-                    this.deleteBetList();
+                    // this.deleteBetList();
                     this.displayTapis();
                     this.writeBetList(true);
-                    this.stats.setStake(this.#bets);
                 }
                 else {
                     console.warn("Can't find bet", betValue);
@@ -854,155 +771,81 @@ class Tapis {
         }
     }
 
-    getClickedPosition(canvas, tapis, event) {
-        let rect = canvas.getBoundingClientRect();
-        let x = event.clientX - rect.left;
-        let y = event.clientY - rect.top;
-        // console.log("Coordinate x: " + x,
-        //     "Coordinate y: " + y);
-
-        let bet = this.getBetFromCoord(x, y);
-        console.log(bet)
-
-        // if (bet && bet !== -1) {
-        //     let div = document.getElementById(this.#betListContainerId);
-        //     let p = document.createElement("p");
-        //     p.innerText = bet;
-        //     div.appendChild(p);
-        // }
-    }
-
-    getWinBets(nbResult) {
-        // { value: bet, coord: { x, y }, stake: this.stakeValue, numbers: [] };
-        let wonBets = [];
-        let lostBets = [];
-        if (this.#bets && this.#bets.length > 0) {
-            for (const bet of this.#bets) {
-                if (bet.numbers.some(n => n === nbResult)) {
-                    wonBets.push(bet);
-                }
-                else {
-                    lostBets.push(bet);
-                }
-            }
+    updateStake(betValue: string, sens: string) {
+        if (sens === "+") {
+            this.changeStake(betValue, this.stakeValue);
         }
-
-        return { won: wonBets, lost: lostBets };
+        else if (sens === "-") {
+            this.changeStake(betValue, -this.stakeValue);
+        }
     }
 
-    highlightBets(nbResult) {
-        this.deleteBetList();
-        this.displayTapis(nbResult);
+    setStake() {
+        console.log(this.#bets)
+        let total = 0;
+        if (this.#bets.length > 0) {
+            this.#bets.forEach(b => {
+                total += b.stake
+            });
+        }
+        this.setState({ stakeTotal: total }, () => {
+            this.props.refreshBank({
+                bank: this.state.bank,
+                totalStake: this.state.stakeTotal,
+            }, !this.canPlaceBet(0));
+        });
+    }
+
+    setBets(bets: Bet[]) {
+        this.#bets = bets.slice();
+        this.displayTapis();
         this.writeBetList(true);
-        let wonLost = this.getWinBets(nbResult);
-        let betValuesSpans = Array.from(document.querySelectorAll("span[data=bet-value]"));
-        for (const betWon of wonLost.won) {
-            const span = betValuesSpans.filter(el => el.innerText == betWon.value)[0];
-            if (span) {
-                span.parentElement.firstElementChild.style.background = "rgb(0,230,0)";
-            }
-        }
-        for (const betLost of wonLost.lost) {
-            const span = betValuesSpans.filter(el => el.innerText == betLost.value)[0];
-            if (span) {
-                span.parentElement.firstElementChild.style.background = "red"; // "#ff5959";
-            }
-        }
+        this.props.updateBetsList(this.#bets.slice());
+        this.setStake();
+    }
+
+    updateBank(nbResult: number) {
+        let betsResult = this.getWinBets(nbResult);
+        let benef = this.getNetGainByNumber(betsResult);
+        this.setState({ bank: this.state.bank + benef }, () => {
+            // if (this.canPlaceBet(0)) {
+                this.props.refreshBank({ bank: this.state.bank, totalStake: this.state.stakeTotal });
+            // } else {
+            //     this.props.refreshBank({ bank: this.state.bank, totalStake: 0 }, true);
+            // }
+        });
+    }
+
+    canPlaceBet(stake: number) {
+        return this.state.bank - (stake + this.state.stakeTotal) >= 0;
     }
 
     hasStake() {
         return this.#bets.length > 0;
     }
 
-    stopBetting() {
-        this.#canPlaceBet = false;
-        this.#betsHistory.push(this.#bets);
-    }
-
-    startBetting() {
-        this.#canPlaceBet = true;
-    }
-
     clear() {
         this.#bets = [];
-        this.deleteBetList();
+        this.props.updateBetsList(this.#bets.slice())
+        // this.deleteBetList();
         this.displayTapis();
-        this.startBetting();
+        // this.startBetting();
+
+        this.setStake();
     }
+
+    // startBetting() {
+    //     this.#canPlaceBet = true;
+    // }
+
+    // stopBetting() {
+    //     this.#canPlaceBet = false;
+    //     // this.#betsHistory.push(this.#bets);
+    // }
 
     getBets() {
-        return JSON.parse(JSON.stringify(this.#bets));
-    }
-
-    playOldBets(sens) {
-        if (this.#betsHistory.length > 0) {
-            if (sens == -1) {
-                if (this.#betHistoryIndex <= 0) {
-                    this.#betHistoryIndex = 0;
-                }
-                else {
-                    this.#betHistoryIndex -= 1;
-                }
-            } else {
-                if (this.#betHistoryIndex >= this.#betsHistory.length - 1) {
-                    this.#betHistoryIndex = this.#betsHistory.length - 1;
-                }
-                else {
-                    this.#betHistoryIndex += 1;
-                }
-            }
-
-            this.stats.reset();
-            this.#bets = JSON.parse(JSON.stringify(this.#betsHistory[this.#betHistoryIndex]));
-            this.stats.setStake(this.#bets);
-            this.deleteBetList();
-            this.displayTapis();
-            this.writeBetList(true);
-            document.getElementById("bet-index").innerText = `${this.#betHistoryIndex + 1}/${this.#betsHistory.length}`
-        }
-    }
-
-    simulate() {
-        if (this.hasStake() || true) {
-            let meanBank = this.stats.getBank(),
-                maxBank = this.stats.getBank(),
-                minBank = this.stats.getBank(),
-                counter = 0;
-            for (let i = 1; i <= 1000; i++) {
-                if (i % 2 == 0) {
-                    this.#bets = [{ value: "line 2", coord: { x: 1, y: 1 }, stake: this.stakeValue, numbers: this.#getNumbersFromBetValue("line 2") },
-                    { value: "Red", coord: { x: 1, y: 1 }, stake: this.stakeValue, numbers: this.#getNumbersFromBetValue("Red") }];
-                }
-                else {
-                    this.#bets = [{ value: "line 2", coord: { x: 1, y: 1 }, stake: this.stakeValue, numbers: this.#getNumbersFromBetValue("line 2") },
-                    { value: "Black", coord: { x: 1, y: 1 }, stake: this.stakeValue, numbers: this.#getNumbersFromBetValue("Black") }];
-                }
-                this.#bets.forEach(b => {
-                    this.#setBetProba(b);
-                });
-                this.roulette.enableSpinning();
-                if (this.stats.getBank() - (this.stakeValue * this.#bets.length) >= 0) {
-                    let res = this.roulette.spinLite();
-                    console.log("result: ", res)
-                    this.stats.showStats(res);
-                    this.highlightBets(res);
-                    meanBank += this.stats.getBank();
-                    if (this.stats.getBank() > maxBank)
-                        maxBank = this.stats.getBank();
-                    if (this.stats.getBank() < minBank)
-                        minBank = this.stats.getBank();
-                    counter += 1;
-                }
-                else {
-                    console.log("Banqueroute, i=" + i);
-                    break;
-                }
-                console.log(`${i} - ${this.stats.getBank()}`);
-            }
-
-            meanBank = meanBank / counter;
-
-            console.log(`Mean: ${meanBank}\nMax: ${maxBank}\nMin: ${minBank}`);
-        }
+        return this.#bets.slice();
     }
 }
+
+export default Tapis
