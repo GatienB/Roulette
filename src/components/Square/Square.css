@@ -1,0 +1,41 @@
+.square {
+    cursor: pointer;
+    height: var(--height-square);
+    width: var(--width-square);
+    background: var(--color-square-red);
+    border: 2px solid black;
+    transition: background 0.2s;
+    align-items: center;
+    display: flex;
+    justify-content: center;
+}
+
+.square:hover {
+    background: var(--hover-color);
+}
+
+.square0 {
+    height: 100%;
+    background: var(--color-square-0);
+    box-sizing: border-box;
+    position: relative;
+}
+
+.square0::before {
+    content: "";
+    border: solid black;
+    height: 0;
+    width: 0;
+    border-width: 80px 10px 80px 10px;
+    border-color: transparent var(--color-square-0) transparent transparent;
+    display: inline-block;
+    padding: 3px;
+    position: absolute;
+    background: transparent;
+    right: 100%;
+    transition: border-color 0.2s;
+}
+
+.square0:hover::before {
+    border-color: transparent var(--hover-color) transparent transparent;
+}
