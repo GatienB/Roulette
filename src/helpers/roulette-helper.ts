@@ -5,7 +5,7 @@ export function getNumberColor(number: number) {
     if (indexNb > indexNb0) {
         indexNb -= 1;
     }
-    return number === 0 ? "green" : (indexNb % 2 == 1 ? "red" : "black");
+    return number === 0 ? "green" : (indexNb % 2 === 1 ? "red" : "black");
 }
 
 export function getRouletteNumberFrom0To2piCounterclockwise(): Array<number> {
