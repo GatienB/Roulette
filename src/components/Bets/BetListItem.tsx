@@ -10,9 +10,6 @@ type BetListItemProps = {
 }
 
 class BetListItem extends Component<BetListItemProps> {
-    constructor(props: BetListItemProps) {
-        super(props);
-    }
 
     onBtnChangeStakeClick(sens: string) {
         this.props.changeStake(sens)

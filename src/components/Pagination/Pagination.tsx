@@ -8,10 +8,6 @@ type PaginationState = {
 
 export class Pagination extends React.Component<PaginationState> {
 
-    constructor(props: any) {
-        super(props);
-    }
-
     // componentDidUpdate(prevProps: Readonly<HistoryState>, prevState: Readonly<{ historyIndex: number; }>, snapshot?: any): void {
     //     console.log(prevProps)
     //     console.log(this.props)

@@ -1,4 +1,4 @@
-import React, { useRef } from "react"
+import React from "react"
 import './Roulette.css'
 import {
     getNumberColor,
@@ -70,7 +70,7 @@ class Roulette extends React.Component<{ isLocked: boolean, onSpin: Function, on
             ctx.moveTo(width / 2, height / 2);
             ctx.arc(width / 2, height / 2, radius, angle, angle + _angle)
             ctx.lineTo(width / 2, height / 2);
-            if (numbers[nbSplit] == 0) {
+            if (numbers[nbSplit] === 0) {
                 ctx.fillStyle = "green";
             }
             else {
@@ -192,7 +192,7 @@ class Roulette extends React.Component<{ isLocked: boolean, onSpin: Function, on
                             i = +index;
                             this.#drawArrow(+index);
                             await this.delay(10);
-                            if (startTime + spinTime < Date.now() && i == randomIndex) {
+                            if (startTime + spinTime < Date.now() && i === randomIndex) {
                                 end = true;
                                 this.#showResult(numbers[i]);
                                 break;

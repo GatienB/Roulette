@@ -78,7 +78,8 @@ class Tapis extends React.Component<TapisProps, { bank: number, stakeTotal: numb
                 ctx.rect(x, y, rectWidth, rectHeight)
                 ctx.fill()
                 let gain = this.getNetGainByNumber(this.getWinBets(nb));
-                if (col < 12 && this.hasStake() && gain != -Infinity && this.#bets.some(b => b.numbers.indexOf(nb) >= 0)) {
+                const _nb = nb;
+                if (col < 12 && this.hasStake() && gain !== -Infinity && this.#bets.some(b => b.numbers.indexOf(_nb) >= 0)) {
                     // ctx.fillStyle = nb !== nbResult ? "white" : "rgb(0,230,0)";
                     ctx.fillStyle = "white";
                     ctx.font = "11px Arial";
@@ -115,7 +116,7 @@ class Tapis extends React.Component<TapisProps, { bank: number, stakeTotal: numb
         ctx.lineTo(offsetX - rectWidth, offsetY + rectHeight * 3);
         ctx.lineTo(offsetX, offsetY + rectHeight * 3);
         let gain = this.getNetGainByNumber(this.getWinBets(0));
-        if (this.hasStake() && gain != -Infinity && this.#bets.some(b => b.numbers.indexOf(0) >= 0)) {
+        if (this.hasStake() && gain !== -Infinity && this.#bets.some(b => b.numbers.indexOf(0) >= 0)) {
             // ctx.fillStyle = 0 !== nbResult ? "white" : "rgb(0,230,0)";
             ctx.fillStyle = "white";
             ctx.font = "11px Arial";
@@ -316,7 +317,7 @@ class Tapis extends React.Component<TapisProps, { bank: number, stakeTotal: numb
                         this.addBetSingleNumber(0);
                         return "0";
                     }
-                    else if (intIndexX == 12) {
+                    else if (intIndexX === 12) {
                         if (indexY > 1 - lineOffset && indexY < 1 + lineOffset) {
                             let _x = this.offsetX + 12 * this.rectWidth + this.rectWidth / 2;
                             let _y = this.offsetY + this.rectHeight;
@@ -622,7 +623,7 @@ class Tapis extends React.Component<TapisProps, { bank: number, stakeTotal: numb
                 let nb = -1;
                 if (index === 1 || index === 4) {
                     // "Even", "Odd"
-                    nb = _n % 2 == 0 && index === 1 ? _n : (_n % 2 == 1 && index === 4 ? _n : -1);
+                    nb = _n % 2 === 0 && index === 1 ? _n : (_n % 2 === 1 && index === 4 ? _n : -1);
                 }
                 else {
                     // "Red", "Black"
@@ -657,7 +658,7 @@ class Tapis extends React.Component<TapisProps, { bank: number, stakeTotal: numb
     #setBetProba(bet: Bet) {
         // let chance = bet.numbers.length / 37;
         // bet.proba = Math.round(((Math.round(chance * 10000) / 10000) * 100) * 100) / 100 + " % - ";
-        if (bet.numbers.length == 24) {
+        if (bet.numbers.length === 24) {
             bet.proba = '1/2';
             bet.benef = 0.5 * bet.stake;
         }
@@ -809,7 +810,7 @@ class Tapis extends React.Component<TapisProps, { bank: number, stakeTotal: numb
         let benef = this.getNetGainByNumber(betsResult);
         this.setState({ bank: this.state.bank + benef }, () => {
             // if (this.canPlaceBet(0)) {
-                this.props.refreshBank({ bank: this.state.bank, totalStake: this.state.stakeTotal });
+            this.props.refreshBank({ bank: this.state.bank, totalStake: this.state.stakeTotal });
             // } else {
             //     this.props.refreshBank({ bank: this.state.bank, totalStake: 0 }, true);
             // }
