@@ -1,4 +1,4 @@
-import { Bet } from "../../models/BetModel";
+import { Bet } from "../../models/bet.model";
 import './BetList.css'
 import BetListItem from "./BetListItem";
 
@@ -17,11 +17,11 @@ function BetList(props: BetListProps) {
             <div id="bet-list">
                 {props.bets.map(b => {
                     return (
-                        <BetListItem key={b.value}
+                        <BetListItem key={b.id}
                             bet={b}
                             resultNumber={props.resultNumber}
-                            changeStake={(sens: string) => props.changeStake(b.value, sens)}
-                            deleteBet={() => props.deleteBet(b.value)} />
+                            changeStake={(sens: string) => props.changeStake(b.id, sens)}
+                            deleteBet={() => props.deleteBet(b.id)} />
                     )
                 })}
             </div>

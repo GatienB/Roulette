@@ -4,52 +4,48 @@ import Tapis from './components/Tapis/Tapis';
 import Roulette from './components/Roulette/Roulette';
 import Banque from './components/Banque/Banque';
 import BetList from './components/Bets/BetList';
-import { BankDetails } from './models/BankModel';
-import { Bet } from './models/BetModel';
 import { Pagination } from './components/Pagination/Pagination';
+import { Bet } from './models/bet.model';
+import { isBetExists } from './components/Tapis/Tapis-helper';
+import { ChipStakeEnum } from './helpers/constants';
 
 type AppState = {
   bets: Bet[],
-  bankDetails: BankDetails,
+  bank: number,
   resultNumber: number,
   history: Bet[][],
   historyIndex: number,
   isRouletteLocked: boolean,
-  isBettingLocked: boolean
+  isBettingLocked: boolean,
+  selectedStake: ChipStakeEnum
 }
 
 class App extends React.Component<{}, AppState> {
   #rouletteRef: React.RefObject<Roulette>;
-  #tapisRef: React.RefObject<Tapis>;
   initialBank: number = 100;
 
   constructor(props: any) {
     super(props);
     this.#rouletteRef = React.createRef();
-    this.#tapisRef = React.createRef();
     this.state = {
       bets: [],
-      bankDetails: {
-        bank: this.initialBank,
-        totalStake: 0
-      },
+      bank: this.initialBank,
       resultNumber: -1,
       history: [],
       historyIndex: -1,
       isRouletteLocked: false,
-      isBettingLocked: false
+      isBettingLocked: false,
+      selectedStake: ChipStakeEnum.VALUE_1
     }
   }
 
   async spin() {
     console.log("spinning", this.state.isRouletteLocked, this.#rouletteRef.current?.canSpin());
-    // if (this.#rouletteRef.current?.canSpin()) {
     if (!this.state.isRouletteLocked && this.#rouletteRef.current?.canSpin()) {
-      if (this.#tapisRef.current?.hasStake()) {
-        // this.#tapisRef.current?.stopBetting();
+      if (this.state.bets.length > 0) {
         this.setState({ isBettingLocked: true }, () => {
           let h = this.state.history.slice();
-          h.push(this.#tapisRef.current?.getBets() as Bet[]);
+          h.push(this.state.bets);
           this.setState({
             history: h,
             historyIndex: h.length - 1
@@ -57,8 +53,9 @@ class App extends React.Component<{}, AppState> {
           this.#rouletteRef.current?.spin().then((value: number) => {
             console.log("after spin");
             console.log("Result: ", value);
-            this.#tapisRef.current?.updateBank(value);
-            this.setState({ resultNumber: value, isBettingLocked: false });
+            let betsResult = this.getWinBets(value);
+            let benef = this.getNetGainByNumber(betsResult);
+            this.setState({ resultNumber: value, isBettingLocked: false, bank: this.state.bank + benef });
           })
         });
       }
@@ -73,27 +70,114 @@ class App extends React.Component<{}, AppState> {
 
   resetRoulette() {
     console.log("reset roulette");
-    this.#tapisRef.current?.clear();
-    this.setState({ resultNumber: -1, historyIndex: -1, isRouletteLocked: false });
-  }
-
-  updateBank(bankDetails: BankDetails, isRouletteLocked: boolean = false) {
-    console.log("UPDATE_BANK: ", bankDetails);
-    this.setState({ bankDetails: { bank: bankDetails.bank, totalStake: bankDetails.totalStake }, isRouletteLocked })
+    this.setState({ resultNumber: -1, historyIndex: -1, isRouletteLocked: false, bets: [] });
   }
 
   updateBetsList(bets: Bet[]) {
     this.setState({ bets: bets })
   }
 
-  stakeUpdated(betValue: string, sens: string) {
-    this.#tapisRef.current?.updateStake(betValue, sens);
+  stakeUpdated(betId: string, sens: string) {
+    if (!this.state.isBettingLocked) {
+      let bets = this.state.bets.slice();
+      let index = bets.findIndex(_b => _b.id === betId);
+      if (index >= 0) {
+        if (sens === "+") {
+          if (this.canAddStake(this.state.selectedStake)) {
+            bets[index].addStake(this.state.selectedStake);
+            this.setState({ bets });
+          } else {
+            this.showAlertStakeSupBank();
+          }
+        } else if (sens === "-") {
+          if (bets[index].stake - this.state.selectedStake <= 0) {
+            bets.splice(index, 1);
+          }
+          else {
+            bets[index].addStake(-this.state.selectedStake);
+          }
+          this.setState({ bets: bets });
+        }
+      }
+    }
   }
 
-  betDeleted(betValue: string) {
-    this.#tapisRef.current?.removeBet(betValue);
+  betDeleted(betId: string) {
+    if (!this.state.isBettingLocked) {
+      let i = this.state.bets.findIndex(b => b.id === betId);
+      if (i >= 0) {
+        let bets = this.state.bets.slice();
+        bets.splice(i, 1);
+        this.setState({ bets: bets });
+      }
+      else {
+        console.warn("Can't find bet Id : ", betId);
+      }
+    }
     this.setState({ historyIndex: -1 });
   }
+
+  addBet(newBet: Bet) {
+    if (!this.state.isBettingLocked) {
+      if (this.canAddStake(newBet.stake)) {
+        if (isBetExists(this.state.bets, newBet)) {
+          console.log("exists")
+          let b = this.state.bets.findIndex(b => b.id === newBet.id);
+          this.state.bets[b].addStake(newBet.stake);
+          this.setState({ bets: [...this.state.bets] });
+        } else {
+          console.log("new")
+          this.setState({ bets: [...this.state.bets, newBet] });
+        }
+      } else {
+        this.showAlertStakeSupBank();
+      }
+    }
+  }
+
+  showAlertStakeSupBank() {
+    alert("Can't bet more than your bank");
+  }
+
+  getTotalStake() {
+    return this.state.bets.reduce((accumulator: number, currentValue: Bet) => accumulator + currentValue.stake, 0);
+  }
+
+  selectedStakeChanged(newStake: ChipStakeEnum) {
+    this.setState({ selectedStake: newStake });
+  }
+
+  canAddStake(newStake: number) {
+    return this.getTotalStake() + newStake <= this.state.bank;
+  }
+
+  getWinBets(nbResult: number) {
+    // { value: bet, coord: { x, y }, stake: this.stakeValue, numbers: [] };
+    let wonBets = [];
+    let lostBets = [];
+    if (this.state.bets && this.state.bets.length > 0) {
+      for (const bet of this.state.bets) {
+        if (bet.numbers.some(n => n === nbResult)) {
+          wonBets.push(bet);
+        }
+        else {
+          lostBets.push(bet);
+        }
+      }
+    }
+
+    return { won: wonBets, lost: lostBets };
+  }
+
+  getNetGainByNumber(wonLostBets: { won: Bet[], lost: Bet[] }) {
+    if (wonLostBets && (wonLostBets.won.length > 0 || wonLostBets.lost.length > 0)) {
+      const stakeLost = wonLostBets.lost.reduce((total: number, next: Bet) => { return total + next.stake }, 0);
+      const benefits = wonLostBets.won.reduce((total: number, next: Bet) => { return total + next.benef }, 0);
+      return benefits - stakeLost;
+    }
+    return -Infinity;
+  }
+
 
   onPageIndexChanged(sens: string) {
     let nextIndex: number = -1;
@@ -112,23 +196,20 @@ class App extends React.Component<{}, AppState> {
     }
 
     this.setState({ historyIndex: nextIndex }, () => {
-      this.#tapisRef.current?.clear();
-      this.setState({ bets: this.state.history[nextIndex].slice() }, () => {
-        this.#tapisRef.current?.setBets(this.state.bets);
-      })
+      this.setState({ bets: this.state.history[nextIndex].slice() })
     })
   }
 
   render(): React.ReactNode {
     return (
       <div id="main">
-        <Banque totalStake={this.state.bankDetails.totalStake} bank={this.state.bankDetails.bank} />
+        <Banque totalStake={this.getTotalStake()} bank={this.state.bank} />
         <div className="row">
           <div className="left-container">
             <BetList bets={this.state.bets}
               resultNumber={this.state.resultNumber}
-              changeStake={(bv: string, s: string) => this.stakeUpdated(bv, s)}
-              deleteBet={(bv: string) => this.betDeleted(bv)} />
+              changeStake={(betId: string, s: string) => this.stakeUpdated(betId, s)}
+              deleteBet={(betId: string) => this.betDeleted(betId)} />
             {/* <h2>Bets stats</h2>
           <div id="bet-stats"></div> */}
             {this.state.history.length > 0 &&
@@ -143,10 +224,10 @@ class App extends React.Component<{}, AppState> {
             <div id="spin-output"></div>
             <br></br>
             <Roulette isLocked={this.state.isRouletteLocked} ref={this.#rouletteRef} onSpin={() => this.spin()} onReset={() => this.resetRoulette()} />
-            <Tapis ref={this.#tapisRef} initialBank={this.initialBank} isBettingLocked={this.state.isBettingLocked}
-              refreshBank={(bankDetails: BankDetails, isRouletteLocked: boolean) => this.updateBank(bankDetails, isRouletteLocked)}
-              updateBetsList={(bets: Bet[]) => this.updateBetsList(bets)}
-            />
+            <Tapis isBettingLocked={this.state.isBettingLocked}
+              bets={this.state.bets}
+              addBet={(bet: Bet) => this.addBet(bet)}
+              selectedStakeChanged={(stake: ChipStakeEnum) => this.selectedStakeChanged(stake)} />
           </div>
         </div>
       </div>

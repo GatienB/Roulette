@@ -1,3 +1,4 @@
+import { Constants } from "./constants";
 
 export function getNumberColor(number: number) {
     const indexNb0 = getNumberIndex(0);
@@ -5,7 +6,12 @@ export function getNumberColor(number: number) {
     if (indexNb > indexNb0) {
         indexNb -= 1;
     }
-    return number === 0 ? "green" : (indexNb % 2 === 1 ? "red" : "black");
+    return number === 0 ?
+        Constants.colorSquare0 : (indexNb % 2 === 1 ? Constants.colorSquareRed : Constants.colorSquareBlack);
+}
+
+export function getRedOrBlack(rgbColor: String) {
+    return rgbColor === Constants.colorSquareRed ? "red" : "black";
 }
 
 export function getRouletteNumberFrom0To2piCounterclockwise(): Array<number> {

@@ -1,7 +1,35 @@
 #tapis {
-    height: 300px;
-    width: 600px;
-    border: 1px solid black;
-    background-color: green;
-    border-radius: 2%;
+    background: var(--background-tapis);
+    padding: 30px;
+    overflow: auto;
+    /* max-width: 600px; */
+    border-radius: 5px;
+    width: fit-content;
+}
+
+#tapis .row {
+    display: flex;
+    /* box-sizing: border-box; */
+}
+
+#tapis .big-squares-row {
+    margin-left: var(--width-square);
+}
+
+#tapis .big-squares-row {
+    /* width: calc(12 * var(--width-square) + (12 * var(--border-width-square))) px; */
+    padding-right: calc(var(--width-square) + var(--border-width-square));
+}
+
+#tapis .chips-list {
+    position: relative;
+    width: 100%;
+    justify-content: center;
+    display: flex;
+    margin-bottom: 30px;
+}
+
+#tapis .chips-list td {
+    position: relative;
+    width: 30px;
 }

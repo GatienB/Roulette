@@ -2,16 +2,17 @@
     cursor: pointer;
     height: var(--height-square);
     width: var(--width-square);
-    background: var(--color-square-red);
-    border: 2px solid black;
+    /* background: var(--color-square-red); */
+    border: var(--border-width-square) solid white;
     transition: background 0.2s;
     align-items: center;
     display: flex;
     justify-content: center;
-}
-
-.square:hover {
-    background: var(--hover-color);
+    color: whitesmoke;
+    position: relative;
+    font-size: 1.3rem;
+    font-weight: bold;
+    user-select: none;
 }
 
 .square0 {
@@ -19,15 +20,16 @@
     background: var(--color-square-0);
     box-sizing: border-box;
     position: relative;
+    border-left: none;
 }
 
 .square0::before {
     content: "";
-    border: solid black;
+    border: solid;
     height: 0;
     width: 0;
-    border-width: 80px 10px 80px 10px;
-    border-color: transparent var(--color-square-0) transparent transparent;
+    border-width: 76px 10px;
+    border-color: transparent white transparent transparent;
     display: inline-block;
     padding: 3px;
     position: absolute;
@@ -36,6 +38,23 @@
     transition: border-color 0.2s;
 }
 
-.square0:hover::before {
+.square0 .fill-arrow {
+    width: 0;
+    height: 0;
+    border: solid;
+    border-width: 76px 8px 76px 10px;
+    border-color: transparent var(--color-square-0) transparent transparent;
+    position: absolute;
+    right: 100%;
+    transition: border-color 0.2s;
+}
+
+/* Mouse events */
+/*.square:hover,*/ .square.selected {
+    background: var(--hover-color) !important;
+    color: black;
+}
+
+.square0:hover .fill-arrow, .square0.selected .fill-arrow {
     border-color: transparent var(--hover-color) transparent transparent;
 }

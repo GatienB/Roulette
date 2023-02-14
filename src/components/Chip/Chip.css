@@ -1,0 +1,77 @@
+.chip {
+    height: 15px;
+    width: 15px;
+    border: 2px dashed black;
+    border-radius: 50%;
+    position: absolute;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.6rem;
+    font-weight: bold;
+    z-index: 1;
+}
+
+.chip:not(.clickable) {
+    pointer-events: none;
+}
+
+.chip.clickable {
+    height: 20px;
+    width: 20px;
+    cursor: pointer;
+    transition: height .5s, width .5s;
+}
+
+.chip.clickable.selected {
+    height: 25px;
+    width: 25px;
+}
+
+.chip .chip-border {
+    height: 100%;
+    width: 100%;
+    background: transparent;
+    border: 2px dashed white;
+    border-radius: 50%;
+    position: absolute;
+    transform: rotate(20deg);
+}
+
+/* 1 5 25 50 100 500*/
+.chip.yellow {
+    background: rgb(226, 162, 0);
+}
+.chip.red {
+    background: red;
+}
+.chip.green {
+    background: rgb(4, 177, 4);
+}
+.chip.blue {
+    background: rgb(23, 196, 253);
+}
+.chip.black {
+    background: black;
+}
+.chip.purple {
+    background: purple;
+}
+
+.chip.yellow, .chip.red, .chip.green, .chip.blue {
+    font-size: 0.6rem;
+}
+.chip.black, .chip.purple {
+    font-size: 0.5rem;
+}
+
+/* .chip .chip-circle {
+    height: 80%;
+    width: 80%;
+    background: transparent;
+    border: 1px dashed white;
+    border-radius: 50%;
+    position: absolute;
+    font-size: 0.6rem;
+} */

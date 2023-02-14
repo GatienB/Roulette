@@ -1,55 +1,72 @@
-import React from 'react';
-import Constants from './../../constants';
-import './Square.css'
+import React, { ReactElement } from 'react';
+import { Constants } from '../../helpers/constants';
+import { getMousePosition } from '../../helpers/mouse-helper';
+import './Square.css';
 
 type SquareProps = {
+    id: string,
     value: string,
-    colspan?: number
+    colspan: number,
+    color: string,
+    onMouseEvents: Function,
+    isSelected: boolean,
+    children: any
+}
+type SquareState = {
+    children: ReactElement[]
 }
 
-class Square extends React.Component<SquareProps> {
+class Square extends React.Component<SquareProps, SquareState> {
     width: string;
 
     constructor(props: SquareProps) {
         super(props);
-        if (props.colspan && props.colspan > 0) {
-            // this.width = `${+Constants.widthSquare.replace("px", "") * +props.colspan}px`;
-            this.width = `calc(${props.colspan / 13 * 100}% - (${Constants.borderWidthSquare} * 2))`;
+        
+        if (props.colspan && props.colspan > 1) {
+            this.width = `${props.colspan / 12 * 100}%`;
         }
         else {
             this.width = Constants.widthSquare;
         }
+
+        this.state = {
+            children: []
+        }
+    }
+
+    handleMouseEvents(event: any) {
+        let position = getMousePosition(event);
+
+        // console.log(`${this.props.id} --> ${position}`)
+        this.props.onMouseEvents(this.props.id, position, event);
+        // if(event.type == "click")
+        //     this.setState({children: [<Chip key={1} stake={100} position={position}></Chip>]})
     }
 
     render(): React.ReactNode {
-        if (this.props.value !== "0") {
-            let valueToDisplay: string;
-            if (!isNaN(+this.props.value)) {
-                if (+this.props.value <= 36) {
-                    valueToDisplay = this.props.value;
-                }
-                else {
-                    valueToDisplay = `line ${+this.props.value - 36}`
-                }
-            }
-            else {
-                valueToDisplay = this.props.value;
-            }
+        let squareClass = "square";
+        let style = {};
+        if (this.props.isSelected) {
+            squareClass += " selected";
+        }
 
-            return (
-                <div className="square" style={{ width: this.width }}>
-                    {valueToDisplay}
-                </div>
-            )
+        if (this.props.value === "0") {
+            squareClass += " square0";
+        } else {
+            style = { width: this.width, background: this.props.color };
         }
-        else {
-            return (
-                <div className="square square0">
-                    0
-                    <span className="arrow"></span>
-                </div>
-            )
-        }
+
+        return (
+            <div onClick={(event) => this.handleMouseEvents(event)}
+                onMouseMove={(event) => this.handleMouseEvents(event)}
+                onMouseLeave={(event) => this.handleMouseEvents(event)}
+                className={squareClass}
+                style={style}>
+                {this.props.value}
+                {squareClass.includes("square0") && <span className="fill-arrow"></span>}
+                {this.props.children}
+            </div>
+        )
     }
 }
 

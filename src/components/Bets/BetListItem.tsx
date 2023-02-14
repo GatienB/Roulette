@@ -1,5 +1,5 @@
 import { Component, ReactNode } from "react";
-import { Bet } from "../../models/BetModel";
+import { Bet } from "../../models/bet.model";
 import './BetListItem.css';
 
 type BetListItemProps = {
@@ -26,12 +26,10 @@ class BetListItem extends Component<BetListItemProps> {
             }
         }
 
-        // console.log(this.props)
-
         return (
             <div className="bet-list-item">
                 <span data-type="bullet" className={"bullet" + bulletClass}></span>
-                <span data-type="bet-value" className="bet-value">{this.props.bet.value}</span>
+                <span data-type="bet-value" className="bet-value">{this.props.bet.id}</span>
                 <button className="btn-change_stake" onClick={() => this.onBtnChangeStakeClick("-")}>-</button>
                 <span className="stake">{this.props.bet.stake} €</span>
                 <button className="btn-change_stake" onClick={() => this.onBtnChangeStakeClick("+")}>+</button>

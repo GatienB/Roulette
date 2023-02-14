@@ -45,3 +45,19 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+:root {
+  --background-tapis: green;
+  --height-square: 60px;
+  --width-square: 60px;
+  /* --hover-color: gold; */
+  --hover-color: rgb(219, 186, 10);
+  --color-square-red: rgb(186, 10, 3);
+  --color-square-black: rgb(3, 11, 3);
+  --color-square-0: rgb(37, 165, 37);
+  --border-width-square: 1px;
+}
+
+.App {
+  padding: 20px;
+}
