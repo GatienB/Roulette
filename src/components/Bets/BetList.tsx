@@ -1,9 +1,9 @@
-import { Bet } from "../../models/bet.model";
+import { useSelector } from "react-redux";
+import { StoreState } from "../../app/store.model";
 import './BetList.css'
 import BetListItem from "./BetListItem";
 
 type BetListProps = {
-    bets: Bet[],
     resultNumber: number,
     changeStake: Function,
     deleteBet: Function
@@ -11,11 +11,13 @@ type BetListProps = {
 
 function BetList(props: BetListProps) {
     // console.log("BetList", props)
+    const bets = useSelector((state: StoreState) => state.bets);
+
     return (
         <div id="bet-list-container">
             <h2>Bets</h2>
             <div id="bet-list">
-                {props.bets.map(b => {
+                {bets.map(b => {
                     return (
                         <BetListItem key={b.id}
                             bet={b}

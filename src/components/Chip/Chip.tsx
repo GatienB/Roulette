@@ -1,4 +1,7 @@
 import { ReactElement } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { setSelectedStake } from "../../app/betSlice";
+import { StoreState } from "../../app/store.model";
 import { ChipStakeEnum } from "../../helpers/constants";
 import { PositionEnum } from "../../models/position.enum";
 import './Chip.css';
@@ -6,9 +9,7 @@ import './Chip.css';
 type ChipProps = {
     stake: number,
     position: PositionEnum,
-    isClickable?: boolean,
-    onChipClick?: Function,
-    stakeSelected?: number
+    isClickable?: boolean
 }
 
 type ChipAbsPos = {
@@ -74,18 +75,21 @@ function getClassFromStake(stake: number): string {
 }
 
 function Chip(props: ChipProps): ReactElement {
+    const dispatch = useDispatch();
+    const selectedStake = useSelector((state: StoreState) => state.selectedStake);
+
     let _classes = ["chip"]
     let pos = getTopLeftFromPosition(props.position);
     _classes.push(getClassFromStake(props.stake));
     if (props.isClickable) {
         _classes.push("clickable");
-        if(props.stakeSelected && props.stakeSelected === props.stake) 
+        if (selectedStake && selectedStake === props.stake)
             _classes.push("selected");
     }
     return (
         <div className={`${_classes.join(" ")}`}
             style={{ top: `calc(${pos.top}% - 7.5px)`, left: `calc(${pos.left}% - 7.5px)` }}
-            {...(props.isClickable && props.onChipClick && { onClick: () => props.onChipClick?.() })}>
+            {...(props.isClickable && { onClick: () => dispatch(setSelectedStake(props.stake)) })}>
             <div className="chip-border"></div>
             <div className="chip-circle"></div>
             {props.stake}

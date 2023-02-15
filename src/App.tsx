@@ -17,11 +17,19 @@ type AppState = {
   resultNumber: number,
   history: Bet[][],
   historyIndex: number,
-  isBettingLocked: boolean,
+  isBettingLocked: boolean
+}
+
+type AppProps = {
+  addBet: Function,
+  updateBet: Function,
+  deleteBet: Function,
+  setBets: Function,
+  bets: Bet[],
   selectedStake: ChipStakeEnum
 }
 
-class App extends React.Component<{ addBet: Function, updateBet: Function, deleteBet: Function, setBets: Function, bets: Bet[] }, AppState> {
+class App extends React.Component<AppProps, AppState> {
   #rouletteRef: React.RefObject<Roulette>;
   initialBank: number = 100;
 
@@ -33,8 +41,7 @@ class App extends React.Component<{ addBet: Function, updateBet: Function, delet
       resultNumber: -1,
       history: [],
       historyIndex: -1,
-      isBettingLocked: false,
-      selectedStake: ChipStakeEnum.VALUE_1
+      isBettingLocked: false
     }
   }
 
@@ -82,17 +89,17 @@ class App extends React.Component<{ addBet: Function, updateBet: Function, delet
       let index = bets.findIndex(_b => _b.id === betId);
       if (index >= 0) {
         if (sens === "+") {
-          if (this.canAddStake(this.state.selectedStake)) {
-            this.props.updateBet(bets[index].id, this.state.selectedStake)
+          if (this.canAddStake(this.props.selectedStake)) {
+            this.props.updateBet(bets[index].id, this.props.selectedStake)
           } else {
             this.showAlertStakeSupBank();
           }
         } else if (sens === "-") {
-          if (bets[index].stake - this.state.selectedStake <= 0) {
+          if (bets[index].stake - this.props.selectedStake <= 0) {
             this.props.deleteBet(bets[index].id)
           }
           else {
-            this.props.updateBet(bets[index].id, -this.state.selectedStake)
+            this.props.updateBet(bets[index].id, -this.props.selectedStake)
           }
         }
       }
@@ -134,10 +141,6 @@ class App extends React.Component<{ addBet: Function, updateBet: Function, delet
 
   getTotalStake() {
     return this.props.bets.reduce((accumulator: number, currentValue: Bet) => accumulator + currentValue.stake, 0);
-  }
-
-  selectedStakeChanged(newStake: ChipStakeEnum) {
-    this.setState({ selectedStake: newStake });
   }
 
   canAddStake(newStake: number) {
@@ -203,8 +206,7 @@ class App extends React.Component<{ addBet: Function, updateBet: Function, delet
         <Banque totalStake={this.getTotalStake()} bank={this.state.bank} />
         <div className="row">
           <div className="left-container">
-            <BetList bets={this.props.bets}
-              resultNumber={this.state.resultNumber}
+            <BetList resultNumber={this.state.resultNumber}
               changeStake={(betId: string, s: string) => this.stakeUpdated(betId, s)}
               deleteBet={(betId: string) => this.betDeleted(betId)} />
             {/* <h2>Bets stats</h2>
@@ -222,8 +224,7 @@ class App extends React.Component<{ addBet: Function, updateBet: Function, delet
             <br></br>
             <Roulette isLocked={this.isRouletteLocked()} ref={this.#rouletteRef} onSpin={() => this.spin()} onReset={() => this.resetRoulette()} />
             <Tapis isBettingLocked={this.state.isBettingLocked}
-              addBet={(bet: Bet) => this.addBet(bet)}
-              selectedStakeChanged={(stake: ChipStakeEnum) => this.selectedStakeChanged(stake)} />
+              addBet={(bet: Bet) => this.addBet(bet)} />
           </div>
         </div>
       </div>
@@ -252,8 +253,10 @@ const mapDispatchToProps = (dispatch: any) => {
 
 function mapStateToProps(state: StoreState) {
   const bets = state.bets;
+  const selectedStake = state.selectedStake;
   return {
-    bets
+    bets,
+    selectedStake
   };
 }
 
