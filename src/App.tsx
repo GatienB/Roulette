@@ -55,7 +55,9 @@ class App extends React.Component<{}, AppState> {
             console.log("Result: ", value);
             let betsResult = this.getWinBets(value);
             let benef = this.getNetGainByNumber(betsResult);
-            this.setState({ resultNumber: value, isBettingLocked: false, bank: this.state.bank + benef });
+            this.setState({ resultNumber: value, isBettingLocked: false, bank: this.state.bank + benef }, () => {
+              this.setState({ isRouletteLocked: this.getTotalStake() > this.state.bank });
+            });
           })
         });
       }
@@ -65,6 +67,9 @@ class App extends React.Component<{}, AppState> {
     }
     else {
       console.log("Spin locked");
+      if (this.getTotalStake() > this.state.bank) {
+        this.showAlertStakeSupBank();
+      }
     }
   }
 
@@ -196,7 +201,9 @@ class App extends React.Component<{}, AppState> {
     }
 
     this.setState({ historyIndex: nextIndex }, () => {
-      this.setState({ bets: this.state.history[nextIndex].slice() })
+      this.setState({ bets: this.state.history[nextIndex].slice() }, () => {
+        this.setState({ isRouletteLocked: this.getTotalStake() > this.state.bank });
+      })
     })
   }
 
