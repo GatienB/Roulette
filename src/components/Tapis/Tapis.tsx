@@ -7,6 +7,9 @@ import { getSelectedSqrIds } from './Tapis-helper';
 import Chip from '../Chip/Chip';
 import { Bet } from "./../../models/bet.model";
 import { PositionEnum } from "./../../models/position.enum";
+import { connect } from 'react-redux';
+import { StoreState } from '../../app/store.model';
+import { createBet } from '../../helpers/bet-helper';
 
 type TapisState = {
     selectedSqrIds: string[];
@@ -39,7 +42,7 @@ class Tapis extends React.Component<TapisProps, TapisState> {
         if (event.type === "click" && !this.props.isBettingLocked) {
             // console.log("click", event);
             let squaresIdsAndNumbers = getSelectedSqrIds(id, position);
-            let newBet: Bet = new Bet(squaresIdsAndNumbers.betId, id, squaresIdsAndNumbers.numbers, this.state.selectedStake, {
+            let newBet: Bet = createBet(squaresIdsAndNumbers.betId, id, squaresIdsAndNumbers.numbers, this.state.selectedStake, {
                 position: isNaN(+squaresIdsAndNumbers.ids[0]) && !squaresIdsAndNumbers.ids[0].startsWith(SpecialBetsEnum.LINE_X) ? PositionEnum.CENTER : position
             })
 
@@ -154,4 +157,11 @@ class Tapis extends React.Component<TapisProps, TapisState> {
     }
 }
 
-export default Tapis;
+function mapStateToProps(state: StoreState) {
+  const bets = state.bets;
+  return {
+    bets
+  };
+}
+
+export default connect(mapStateToProps)(Tapis);

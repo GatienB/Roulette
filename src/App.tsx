@@ -8,19 +8,20 @@ import { Pagination } from './components/Pagination/Pagination';
 import { Bet } from './models/bet.model';
 import { isBetExists } from './components/Tapis/Tapis-helper';
 import { ChipStakeEnum } from './helpers/constants';
+import { addBet, deleteBet, updateBet, setBets } from './app/betSlice';
+import { connect } from 'react-redux'
+import { StoreState } from './app/store.model';
 
 type AppState = {
-  bets: Bet[],
   bank: number,
   resultNumber: number,
   history: Bet[][],
   historyIndex: number,
-  isRouletteLocked: boolean,
   isBettingLocked: boolean,
   selectedStake: ChipStakeEnum
 }
 
-class App extends React.Component<{}, AppState> {
+class App extends React.Component<{ addBet: Function, updateBet: Function, deleteBet: Function, setBets: Function, bets: Bet[] }, AppState> {
   #rouletteRef: React.RefObject<Roulette>;
   initialBank: number = 100;
 
@@ -28,24 +29,22 @@ class App extends React.Component<{}, AppState> {
     super(props);
     this.#rouletteRef = React.createRef();
     this.state = {
-      bets: [],
       bank: this.initialBank,
       resultNumber: -1,
       history: [],
       historyIndex: -1,
-      isRouletteLocked: false,
       isBettingLocked: false,
       selectedStake: ChipStakeEnum.VALUE_1
     }
   }
 
   async spin() {
-    console.log("spinning", this.state.isRouletteLocked, this.#rouletteRef.current?.canSpin());
-    if (!this.state.isRouletteLocked && this.#rouletteRef.current?.canSpin()) {
-      if (this.state.bets.length > 0) {
+    console.log("spinning", this.isRouletteLocked(), this.#rouletteRef.current?.canSpin());
+    if (!this.isRouletteLocked() && this.#rouletteRef.current?.canSpin()) {
+      if (this.props.bets.length > 0) {
         this.setState({ isBettingLocked: true }, () => {
           let h = this.state.history.slice();
-          h.push(this.state.bets);
+          h.push(this.props.bets);
           this.setState({
             history: h,
             historyIndex: h.length - 1
@@ -55,9 +54,7 @@ class App extends React.Component<{}, AppState> {
             console.log("Result: ", value);
             let betsResult = this.getWinBets(value);
             let benef = this.getNetGainByNumber(betsResult);
-            this.setState({ resultNumber: value, isBettingLocked: false, bank: this.state.bank + benef }, () => {
-              this.setState({ isRouletteLocked: this.getTotalStake() > this.state.bank });
-            });
+            this.setState({ resultNumber: value, isBettingLocked: false, bank: this.state.bank + benef });
           })
         });
       }
@@ -75,33 +72,28 @@ class App extends React.Component<{}, AppState> {
 
   resetRoulette() {
     console.log("reset roulette");
-    this.setState({ resultNumber: -1, historyIndex: -1, isRouletteLocked: false, bets: [] });
-  }
-
-  updateBetsList(bets: Bet[]) {
-    this.setState({ bets: bets })
+    this.setState({ resultNumber: -1, historyIndex: -1 });
+    this.props.setBets([]);
   }
 
   stakeUpdated(betId: string, sens: string) {
     if (!this.state.isBettingLocked) {
-      let bets = this.state.bets.slice();
+      let bets = this.props.bets.slice();
       let index = bets.findIndex(_b => _b.id === betId);
       if (index >= 0) {
         if (sens === "+") {
           if (this.canAddStake(this.state.selectedStake)) {
-            bets[index].addStake(this.state.selectedStake);
-            this.setState({ bets });
+            this.props.updateBet(bets[index].id, this.state.selectedStake)
           } else {
             this.showAlertStakeSupBank();
           }
         } else if (sens === "-") {
           if (bets[index].stake - this.state.selectedStake <= 0) {
-            bets.splice(index, 1);
+            this.props.deleteBet(bets[index].id)
           }
           else {
-            bets[index].addStake(-this.state.selectedStake);
+            this.props.updateBet(bets[index].id, -this.state.selectedStake)
           }
-          this.setState({ bets: bets });
         }
       }
     }
@@ -109,11 +101,9 @@ class App extends React.Component<{}, AppState> {
 
   betDeleted(betId: string) {
     if (!this.state.isBettingLocked) {
-      let i = this.state.bets.findIndex(b => b.id === betId);
-      if (i >= 0) {
-        let bets = this.state.bets.slice();
-        bets.splice(i, 1);
-        this.setState({ bets: bets });
+      let bet = this.props.bets.find(b => b.id === betId);
+      if (bet) {
+        this.props.deleteBet(bet.id)
       }
       else {
         console.warn("Can't find bet Id : ", betId);
@@ -125,14 +115,12 @@ class App extends React.Component<{}, AppState> {
   addBet(newBet: Bet) {
     if (!this.state.isBettingLocked) {
       if (this.canAddStake(newBet.stake)) {
-        if (isBetExists(this.state.bets, newBet)) {
+        if (isBetExists(this.props.bets, newBet)) {
           console.log("exists")
-          let b = this.state.bets.findIndex(b => b.id === newBet.id);
-          this.state.bets[b].addStake(newBet.stake);
-          this.setState({ bets: [...this.state.bets] });
+          this.props.updateBet(newBet.id, newBet.stake)
         } else {
           console.log("new")
-          this.setState({ bets: [...this.state.bets, newBet] });
+          this.props.addBet(newBet);
         }
       } else {
         this.showAlertStakeSupBank();
@@ -145,7 +133,7 @@ class App extends React.Component<{}, AppState> {
   }
 
   getTotalStake() {
-    return this.state.bets.reduce((accumulator: number, currentValue: Bet) => accumulator + currentValue.stake, 0);
+    return this.props.bets.reduce((accumulator: number, currentValue: Bet) => accumulator + currentValue.stake, 0);
   }
 
   selectedStakeChanged(newStake: ChipStakeEnum) {
@@ -156,12 +144,16 @@ class App extends React.Component<{}, AppState> {
     return this.getTotalStake() + newStake <= this.state.bank;
   }
 
+  isRouletteLocked() {
+    return this.getTotalStake() > this.state.bank;
+  }
+
   getWinBets(nbResult: number) {
     // { value: bet, coord: { x, y }, stake: this.stakeValue, numbers: [] };
     let wonBets = [];
     let lostBets = [];
-    if (this.state.bets && this.state.bets.length > 0) {
-      for (const bet of this.state.bets) {
+    if (this.props.bets && this.props.bets.length > 0) {
+      for (const bet of this.props.bets) {
         if (bet.numbers.some(n => n === nbResult)) {
           wonBets.push(bet);
         }
@@ -201,9 +193,7 @@ class App extends React.Component<{}, AppState> {
     }
 
     this.setState({ historyIndex: nextIndex }, () => {
-      this.setState({ bets: this.state.history[nextIndex].slice() }, () => {
-        this.setState({ isRouletteLocked: this.getTotalStake() > this.state.bank });
-      })
+      this.props.setBets(this.state.history[nextIndex])
     })
   }
 
@@ -213,7 +203,7 @@ class App extends React.Component<{}, AppState> {
         <Banque totalStake={this.getTotalStake()} bank={this.state.bank} />
         <div className="row">
           <div className="left-container">
-            <BetList bets={this.state.bets}
+            <BetList bets={this.props.bets}
               resultNumber={this.state.resultNumber}
               changeStake={(betId: string, s: string) => this.stakeUpdated(betId, s)}
               deleteBet={(betId: string) => this.betDeleted(betId)} />
@@ -230,9 +220,8 @@ class App extends React.Component<{}, AppState> {
           <div>
             <div id="spin-output"></div>
             <br></br>
-            <Roulette isLocked={this.state.isRouletteLocked} ref={this.#rouletteRef} onSpin={() => this.spin()} onReset={() => this.resetRoulette()} />
+            <Roulette isLocked={this.isRouletteLocked()} ref={this.#rouletteRef} onSpin={() => this.spin()} onReset={() => this.resetRoulette()} />
             <Tapis isBettingLocked={this.state.isBettingLocked}
-              bets={this.state.bets}
               addBet={(bet: Bet) => this.addBet(bet)}
               selectedStakeChanged={(stake: ChipStakeEnum) => this.selectedStakeChanged(stake)} />
           </div>
@@ -242,4 +231,30 @@ class App extends React.Component<{}, AppState> {
   }
 }
 
-export default App;
+// export default App;
+
+const mapDispatchToProps = (dispatch: any) => {
+  return {
+    addBet: (bet: Bet) => {
+      dispatch(addBet(bet))
+    },
+    updateBet: (id: string, stakeToAdd: number) => {
+      dispatch(updateBet({ id, stakeToAdd }))
+    },
+    deleteBet: (id: string) => {
+      dispatch(deleteBet(id))
+    },
+    setBets: (bets: Bet[]) => {
+      dispatch(setBets(bets));
+    }
+  }
+}
+
+function mapStateToProps(state: StoreState) {
+  const bets = state.bets;
+  return {
+    bets
+  };
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(App)
