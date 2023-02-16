@@ -11,13 +11,21 @@ import { ChipStakeEnum } from './helpers/constants';
 import { addBet, deleteBet, updateBet, setBets } from './app/betSlice';
 import { connect } from 'react-redux'
 import { StoreState } from './app/store.model';
+import Alert from './components/Alert/Alert';
+
+type AlertType = {
+  showAlert: boolean
+  message: string
+  title: string
+}
 
 type AppState = {
   bank: number,
   resultNumber: number,
   history: Bet[][],
   historyIndex: number,
-  isBettingLocked: boolean
+  isBettingLocked: boolean,
+  alert: AlertType
 }
 
 type AppProps = {
@@ -41,7 +49,12 @@ class App extends React.Component<AppProps, AppState> {
       resultNumber: -1,
       history: [],
       historyIndex: -1,
-      isBettingLocked: false
+      isBettingLocked: false,
+      alert: {
+        showAlert: false,
+        message: "",
+        title: ""
+      }
     }
   }
 
@@ -66,7 +79,11 @@ class App extends React.Component<AppProps, AppState> {
         });
       }
       else {
-        alert("Place a bet before spinning the wheel.");
+        this.setState({alert: {
+          showAlert: true,
+          title: "Roulette locked",
+          message: "Place a bet before spinning the roulette."
+        }});
       }
     }
     else {
@@ -136,7 +153,13 @@ class App extends React.Component<AppProps, AppState> {
   }
 
   showAlertStakeSupBank() {
-    alert("Can't bet more than your bank");
+    this.setState({
+      alert: {
+        title: "Impossible to add bet",
+        message: "Your bet must be less than or equal to your bank",
+        showAlert: true
+      }
+    });
   }
 
   getTotalStake() {
@@ -203,6 +226,10 @@ class App extends React.Component<AppProps, AppState> {
   render(): React.ReactNode {
     return (
       <div id="main">
+        {this.state.alert.showAlert &&
+          <Alert title={this.state.alert.title}
+            message={this.state.alert.message}
+            onClose={() => this.setState({ alert: { message: "", title: "", showAlert: false } })} />}
         <Banque totalStake={this.getTotalStake()} bank={this.state.bank} />
         <div className="row">
           <div className="left-container">
