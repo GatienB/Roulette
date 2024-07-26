@@ -38,13 +38,13 @@ export class Pagination extends React.Component<PaginationState> {
 
     render(): React.ReactNode {
         return (
-            <div>
+            <>
                 {/*this.props.index > 0 &&*/
                     <button id="playLastBetsBtn" onClick={() => this.onIndexChanged("-")}>&lt;</button>}
                 <span id="bet-index">{this.props.index !== -1 ? this.props.index + 1 : '-'}/{this.props.indexMax}</span>
                 {/*this.props.index < this.props.indexMax - 1 &&*/
                     <button id="playNextBetsBtn" onClick={() => this.onIndexChanged("+")}>&gt;</button>}
-            </div>
+            </>
         )
     }
 }

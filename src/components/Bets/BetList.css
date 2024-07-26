@@ -1,13 +1,14 @@
 #bet-list-container {
-    width: 100%;
     overflow: auto;
-    height: 50%;
-    max-height: 50vh;
+    max-height: 301px;
+    max-width: 500px;
+}
+
+h2 {
+    margin-top: 0;
 }
 
 #bet-list {
-    width: 100%;
     overflow: auto;
-    /* height: 50%;
-    max-height: 50vh; */
+    padding-left: 15px;
   }

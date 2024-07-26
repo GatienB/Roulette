@@ -23,7 +23,7 @@
 }
 
 .alert .content #message {
-    overflow: scroll;
+    overflow: auto;
     max-height: 20vh;
 }
 

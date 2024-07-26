@@ -1,19 +1,12 @@
-body {
-  width: 100vw;
-  height: 100vh;
-  margin: 0;
-  text-align: center;
-}
-
 #input_splits {
   margin: 50px 0px;
 }
 
-#spin-output {
+/* #spin-output {
   font-weight: bold;
   font-size: xx-large;
   height: 40px;
-}
+} */
 
 #bet-stats {
   width: 100%;
@@ -41,15 +34,24 @@ body {
   display: flex;
 }
 
-#main {
+.bets-list {
+  width: 50%;
   display: flex;
   flex-direction: column;
 }
 
+#main {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 :root {
   --background-tapis: green;
-  --height-square: 60px;
-  --width-square: 60px;
+  --height-square: 50px;
+  --width-square: 50px;
   /* --hover-color: gold; */
   --hover-color: rgb(219, 186, 10);
   --color-square-red: rgb(186, 10, 3);
@@ -60,4 +62,16 @@ body {
 
 .App {
   padding: 20px;
+}
+
+.tapis-container {
+  display: flex;
+  justify-content: center;
+}
+
+.pagination-container {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;
+  align-items: end;
 }

@@ -223,8 +223,8 @@ class Roulette extends React.Component<{ isLocked: boolean, onSpin: Function, on
 
     #drawArrow(numberIndex: number) {
         if (numberIndex < 0 || numberIndex > 37) {
-            let divOut = document.getElementById("spin-output") as HTMLElement;
-            divOut.innerText = "Le nombre doit être compris entre 0 et 37 inclus";
+            // let divOut = document.getElementById("spin-output") as HTMLElement;
+            // divOut.innerText = "Le nombre doit être compris entre 0 et 37 inclus";
         }
         else {
             let c = this.#canvasRef.current as HTMLCanvasElement;
