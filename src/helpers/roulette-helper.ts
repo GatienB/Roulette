@@ -7,11 +7,11 @@ export function getNumberColor(number: number) {
         indexNb -= 1;
     }
     return number === 0 ?
-        Constants.colorSquare0 : (indexNb % 2 === 1 ? Constants.colorSquareRed : Constants.colorSquareBlack);
+        Constants.colorSquare0() : (indexNb % 2 === 1 ? Constants.colorSquareRed() : Constants.colorSquareBlack());
 }
 
 export function getRedOrBlack(rgbColor: String) {
-    return rgbColor === Constants.colorSquareRed ? "red" : "black";
+    return rgbColor === Constants.colorSquareRed() ? "red" : "black";
 }
 
 export function getRouletteNumberFrom0To2piCounterclockwise(): Array<number> {

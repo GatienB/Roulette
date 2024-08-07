@@ -51,7 +51,7 @@
 :root {
   --background-tapis: green;
   --height-square: 50px;
-  --width-square: 50px;
+  --width-square: 60px;
   /* --hover-color: gold; */
   --hover-color: rgb(219, 186, 10);
   --color-square-red: rgb(186, 10, 3);

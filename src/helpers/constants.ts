@@ -1,13 +1,18 @@
 
 export const Constants = {
-    widthSquare: "60px",
-    borderWidthSquare: "1px",
-    colorSquareRed: "rgb(186, 10, 3)",
-    colorSquareBlack: "rgb(3, 11, 3)",
-    colorSquare0: "rgb(37, 165, 37)",
+    widthSquare: () => (getStyle("--width-square") || "60px"),
+    borderWidthSquare: () => (getStyle("--border-width-square") || "1px"),
+    colorSquareRed: () => (getStyle("--color-square-red") || "rgb(186, 10, 3)"),
+    colorSquareBlack: () => (getStyle("--color-square-black") || "rgb(3, 11, 3)"),
+    colorSquare0: () => (getStyle("--color-square-0") || "rgb(37, 165, 37)"),
 
     // In px
-    offsetBetweenSqr: 6
+    offsetBetweenSqr: 6,
+
+}
+
+function getStyle(propName: string) {
+    return getComputedStyle(document.body).getPropertyValue(propName);
 }
 
 export enum SpecialBetsEnum {

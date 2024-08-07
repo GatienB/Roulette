@@ -12,7 +12,7 @@ test('test tapis selected squares', () => {
 
 test('test tapis selected special squares', () => {
     expect(getSelectedSqrIds(SpecialBetsEnum.BLACK, PositionEnum.TOP).ids)
-        .toStrictEqual([SpecialBetsEnum.BLACK, ...getRouletteNumberFrom0To2piCounterclockwise().sort().filter(n => getNumberColor(n) === Constants.colorSquareBlack).map(v => '' + v)]);
+        .toStrictEqual([SpecialBetsEnum.BLACK, ...getRouletteNumberFrom0To2piCounterclockwise().sort().filter(n => getNumberColor(n) === Constants.colorSquareBlack()).map(v => '' + v)]);
     expect(getSelectedSqrIds(SpecialBetsEnum.EVEN, PositionEnum.TOP).ids)
         .toStrictEqual([SpecialBetsEnum.EVEN, ...getRouletteNumberFrom0To2piCounterclockwise().sort().filter(n => n !== 0 && n % 2 === 0).map(v => '' + v)]);
     expect(getSelectedSqrIds(SpecialBetsEnum._13_TO_24, PositionEnum.LEFT).ids)

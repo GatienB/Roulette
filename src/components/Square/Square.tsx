@@ -26,7 +26,7 @@ class Square extends React.Component<SquareProps, SquareState> {
             this.width = `${props.colspan / 12 * 100}%`;
         }
         else {
-            this.width = Constants.widthSquare;
+            this.width = Constants.widthSquare();
         }
 
         this.state = {
